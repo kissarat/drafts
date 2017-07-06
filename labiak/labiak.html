@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="low.js"></script>
+    <script src="rule.js"></script>
+    <script src="syntax.js"></script>
+</head>
+<body>
+<script>
+
+  function calc() {
+    return Syntax.create(`
+    ;
+      Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ;
+      Natural = Digit{Digit} ;
+      Integer = ['+'|'-']Natural ;
+      Real = Integer '.' Integer ;
+      Multi = '*'|'/' ;
+      Operation = '+'|'-'|Multi ;
+      Number = Real|Integer|Natural ;
+      expression = expression Operation Number
+    `)
+  }
+
+  const syntax = calc()
+</script>
+</body>
+</html>
