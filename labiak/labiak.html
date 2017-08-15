@@ -63,10 +63,6 @@
             position: absolute;
         }
 
-        #view .rule:hover {
-            filter: hue-rotate(180deg) saturate(0);
-        }
-
         #view .rule.opt {
             border-color: #009300;
             background-color: rgba(0, 222, 0, 0.2);
@@ -141,6 +137,10 @@
             line-height: 1.2em;
         }
 
+        #view .rule:hover {
+            filter: hue-rotate(180deg) saturate(0);
+        }
+
         #view .rule.active {
             animation: 1.2s active infinite;
             filter: grayscale(0);
@@ -148,11 +148,10 @@
 
         @keyframes active {
             50% {
-                /*filter: hue-rotate(180deg);*/
                 opacity: 0.8;
                 border-color: transparent;
                 background-color: transparent;
-                margin-top: 12px;
+                transform: translate(0, 12px);
             }
         }
     </style>
