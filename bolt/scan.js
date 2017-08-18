@@ -33,6 +33,9 @@ function scan(string, lexemes = BackusNaurLexemes) {
         symbols.push(key)
         continue next
       }
+      else if (lexeme instanceof Array) {
+        continue
+      }
       if (i > 1000 * 1000) {
         throw new Error('Too much lexemes')
       }

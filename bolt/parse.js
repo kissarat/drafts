@@ -1,7 +1,23 @@
-function* generator(array) {
-  for(let i = 0; i < array.length; i++) {
-    yield array[i]
+function range(max, min = 0) {
+  const array = []
+  for (let i = min; i < max; i++) {
+    array.push(i)
   }
+  return array
+}
+
+function generator(array, start = 0) {
+  function counter(control = 1) {
+    const value = array[counter.number]
+    if (isFinite(control)) {
+      counter.number += control
+    }
+    return value
+  }
+
+  counter.number = start
+  counter.array = array
+  return counter
 }
 
 function parseBackusNaurDefinition(g, type = null) {
@@ -9,7 +25,7 @@ function parseBackusNaurDefinition(g, type = null) {
   let isAlternative = false
   let c
 
-  loop: while (c = g.next().value) {
+  loop: while (c = g()) {
     switch (c) {
       case 'RepeatLeft':
         node.push(parseBackusNaurDefinition(g, 'repeat'))
@@ -63,10 +79,32 @@ function parseBackusNaurDefinition(g, type = null) {
 
 function parseBackusNaur(symbols) {
   const g = generator(symbols)
-  const definitions = []
+  const definitions = {}
   let definition
-  while ((definition = parseBackusNaurDefinition(g)) && definition.length > 0){
-    definitions.push(definition)
+  while ((definition = parseBackusNaurDefinition(g)) && definition.length > 0) {
+    if ('Assign' === definition[0]) {
+      definitions[definition[1]] = definition[2]
+    }
+    else {
+      throw new Error('Unknown definition ' + JSON.stringify(definition))
+    }
   }
   return definitions
+}
+
+function parseRule(rule, g) {
+
+}
+
+function parse(syntax, g) {
+  let c
+  while (c = g.next().value) {
+    for (const key in syntax) {
+      const rule = syntax[key]
+      switch (rule[0]) {
+        case 'group':
+
+      }
+    }
+  }
 }
