@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bolt</title>
+    <script src="lex.js"></script>
+</head>
+<body>
+<script>
+    const syntax = `
+    ;
+      Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ;
+      Natural = Digit {Digit} ;
+      Addictive = '+'|'-' ;
+      Integer = [Addictive] Natural ;
+      Real = Integer '.' Integer ;
+      Multi = '*'|'/' ;
+      Operation = Addictive|Multi ;
+      Number = Real|Integer|Natural ;
+      Expression = expression Operation Number ;
+      Letter = _ | a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | s | t | u | v | w | x | y | z ;
+      Atom = Letter {Letter | Digit} ;
+      Define = Atom '=' Expression ;
+      Condition = Expression '?' Expression [':' Expression]
+    `
+</script>
+</body>
+</html>

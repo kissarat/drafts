@@ -34,7 +34,7 @@ function scan(string, lexemes = Lexemes) {
     let s
 
     function lexemeScan(rule) {
-      if (rule.exec && (s = rule.exec(sub))) {
+      if ('function' === typeof rule.exec && (s = rule.exec(sub))) {
         s = s.length > 1 ? s[1] : s[0]
         if (s) {
           sub = sub.replace(rule, '')
