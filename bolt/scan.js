@@ -1,40 +1,37 @@
-const BackusNaurLexemes = {
-  Atom: /^\w+|^\d?\.\d+|^'([^']+)'|^"([^"]+)"/,
-  // Comment: /^#.*/,
-  Space: /^\s+/m,
-  GroupLeft: '(',
-  GroupRight: ')',
-  Or: '|',
-  RepeatLeft: '{',
-  RepeatRight: '}',
-  OptLeft: '[',
-  OptRight: ']',
-  End: ';',
-  Assign: '='
-}
+const Lexemes = {}
 
-const LanguageLexems = {
-  Space: /^\s+/m,
-  Integer: /^\d+/,
-  Real: /^\d+\.\d+/,
-  Atom: /^[a-z]\w*/i,
-  Assign: '=',
-  Add: '+',
-  Sub: '-',
-  Mult: '*',
-  Div: '/'
+Lexemes.BackusNaur = new Map()
+Lexemes.BackusNaur.set('Atom', /^\w+|^\d?\.\d+|^'([^']+)'|^"([^"]+)"/)
+Lexemes.BackusNaur.set('Space', /^\s+/m)
+Lexemes.BackusNaur.set('GroupLeft', '(')
+Lexemes.BackusNaur.set('GroupRight', ')')
+Lexemes.BackusNaur.set('Or', '|')
+Lexemes.BackusNaur.set('RepeatLeft', '{')
+Lexemes.BackusNaur.set('RepeatRight', '}')
+Lexemes.BackusNaur.set('OptLeft', '[')
+Lexemes.BackusNaur.set('OptRight', ']')
+Lexemes.BackusNaur.set('End', ';')
+Lexemes.BackusNaur.set('Assign', '=')
 
-}
+Lexemes.Labiak = new Map()
+Lexemes.Labiak.set('Space', /^\s+/m)
+Lexemes.Labiak.set('Real', /^\d+.\d+/)
+Lexemes.Labiak.set('Integer', /^\d+/)
+Lexemes.Labiak.set('Atom', /^[a-z]\w*/i)
+Lexemes.Labiak.set('Assign', '=')
+Lexemes.Labiak.set('Add', '+')
+Lexemes.Labiak.set('Sub', '-')
+Lexemes.Labiak.set('Mult', '*')
+Lexemes.Labiak.set('Div', '*')
 
-function scan(string, lexemes = BackusNaurLexemes) {
+function scan(string, lexemes = Lexemes.BackusNaur) {
   string = string
       .replace(/\s+/g, ' ')
   let s;
   let i = 0;
   const symbols = []
   next: for (; string.length > 0; i++) {
-    for (const key in lexemes) {
-      const lexeme = lexemes[key];
+    for (const [key, lexeme] of lexemes) {
       if ('function' === typeof lexeme.exec && (s = lexeme.exec(string))) {
        string = string.replace(lexeme, '')
         s = s.length > 1 ? s[1] || s[2] || s[3] || s[4] || s[5] || s[0] : s[0]

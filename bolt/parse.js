@@ -1,21 +1,28 @@
 class Language {
-  constructor(lexemes = LanguageLexems, syntax = mathSyntax) {
-    this.lexems = lexemes
-    this.syntax = 'string' === typeof syntax ? parseBackusNaur(scan(syntax)) : syntax
+  constructor(lexemes = Lexemes.Labiak, syntax = mathSyntax) {
+    this.lexemes = lexemes
+    syntax = 'string' === typeof syntax ? parseBackusNaur(scan(syntax)) : syntax
+    this.syntax = new Map()
+    for (const [assign, name, [...rule]] of syntax) {
+      this.syntax.set(name, rule)
+    }
+  }
+
+  scan(g) {
+    return scan(g, this.lexemes)
   }
 
   parse(g) {
     if ('string' === typeof g) {
-      g = generator(scan(g, this.lexems))
+      g = generator(this.scan(g))
     }
     let output = []
     g.index = 0
-    while(g.can()) {
+    while (g.can()) {
       let r
-      for (const name in this.syntax) {
-        r = this.parseRule(g, ...this.syntax[name])
+      for (const rule of this.syntax) {
+        r = this.parseRule(g, ...rule)
         if (r) {
-          g.index++
           output.push(r)
           break
         }
@@ -32,20 +39,20 @@ class Language {
     let nodes = []
     let isValidRule = true
     let i = 0
-    // const index = g.index
     loop: for (; rule[i] && (c = g.at(0)); i++) {
       let part = rule[i]
-      const isLexeme = 'string' === typeof part && part in this.lexems
+      const isLexeme = 'string' === typeof part && this.lexemes.has(part)
       if ('string' === typeof part && !isLexeme) {
-        part = this.syntax[part]
+        part = this.syntax.get(part)
       }
       if (!part) {
         throw new Error('No rule ' + rule[i])
       }
       let node
       if (isLexeme) {
-        const token = this.lexems[part]
+        const token = this.lexemes.get(part)
         node = 'string' === typeof token ? part : c
+        g.index++
       }
       else {
         node = this.parseRule(g, ...part)
@@ -80,6 +87,7 @@ class Language {
       // g.index = index
       return []
     }
+    // return 1 === nodes.length ? nodes[0] : nodes
     return 1 === nodes.length ? nodes[0] : nodes
   }
 

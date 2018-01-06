@@ -107,12 +107,12 @@ function parseBackusNaurDefinition(g, type = null) {
 
 function parseBackusNaur(symbols) {
   const g = generator(symbols)
-  const definitions = {}
+  const definitions = []
   let definition
   while ((definition = parseBackusNaurDefinition(g)) && definition.length > 0) {
     // console.log(definition)
     if ('assign' === definition[0]) {
-      definitions[definition[1]] = definition[2]
+      definitions.push(definition)
     }
     else {
       throw new Error('Unknown definition ' + JSON.stringify(definition))
