@@ -23,6 +23,8 @@ Lexemes.Labiak.set('Add', '+')
 Lexemes.Labiak.set('Sub', '-')
 Lexemes.Labiak.set('Mult', '*')
 Lexemes.Labiak.set('Div', '*')
+Lexemes.Labiak.set('LeftRound', '(')
+Lexemes.Labiak.set('RightRound', ')')
 
 function scan(string, lexemes = Lexemes.BackusNaur) {
   string = string

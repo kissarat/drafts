@@ -20,13 +20,20 @@ class Language {
     g.index = 0
     while (g.can()) {
       let r
-      for (const rule of this.syntax) {
-        r = this.parseRule(g, ...rule)
+      // for (const rule of this.syntax) {
+      //   r = this.parseRule(g, ...rule)
+      //   if (r) {
+      //     output.push(r)
+      //     break
+      //   }
+      // }
+      // for (let i = 0; i < 1; i++) {
+        r = this.parseRule(g, ...this.syntax.get('St'))
         if (r) {
           output.push(r)
           break
         }
-      }
+      // }
       if (!r) {
         throw new Error('Rule not found')
       }
@@ -87,7 +94,7 @@ class Language {
       // g.index = index
       return []
     }
-    // return 1 === nodes.length ? nodes[0] : nodes
+    // return nodes
     return 1 === nodes.length ? nodes[0] : nodes
   }
 
