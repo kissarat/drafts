@@ -8,13 +8,16 @@
 </head>
 <body>
 <script>
+    // Positive = Integer | Real ;
+    // Number = [Addictive] Positive ;
+
     const mathSyntax = `
-      Number = [Addictive] Integer | Real;
+      Number = Integer | Real ;
       Addictive = Add | Sub ;
       Op = Addictive | Mult | Div ;
-      Exp = Number Op Number | Exp Op Number | LeftRound Exp Right ;
+      Exp = Number Op Number | Exp Op Number | LeftRound Exp RightRound ;
       Define = Atom Assign Exp ;
-      St = Number | Exp | Define
+      St = Number | Exp | Define ;
     `
 </script>
 <script src="parse.js"></script>
