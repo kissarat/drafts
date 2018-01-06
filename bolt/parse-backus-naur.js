@@ -16,13 +16,16 @@ function generator(array, start = -1) {
 
   counter.index = start
   counter.array = array
+  counter.can = function (i = 0) {
+    return counter.index + i < counter.array.length
+  }
   counter.slice = function (start = counter.index) {
     if (start < 0) {
       start += counter.index
     }
     return generator(counter.array, start)
   }
-  counter.at = function (i) {
+  counter.at = function (i = 0) {
     return counter.array[counter.index + i]
   }
   return counter
@@ -30,7 +33,7 @@ function generator(array, start = -1) {
 
 function parseBackusNaurDefinition(g, type = null) {
   let node = []
-  let isAlternative = false
+  let alt = false
   let c
 
   loop: while (c = g()) {
@@ -48,11 +51,21 @@ function parseBackusNaurDefinition(g, type = null) {
         break
 
       case 'Or':
-        isAlternative = true
+        if ('or' !== type) {
+          type = 'or'
+          alt = [type]
+        }
+        if (node.length > 1)  {
+          alt.push(node)
+        }
+        else {
+          alt.push(node[0])
+        }
+        node = []
         break
 
       case 'Assign':
-        type = 'Assign'
+        type = 'assign'
         node = [node[0], parseBackusNaurDefinition(g, 'group')]
         break loop
 
@@ -60,6 +73,7 @@ function parseBackusNaurDefinition(g, type = null) {
         // if ('string' === typeof c) {
         //   node.push(c)
         // }
+
         if (c && 'Atom' === c[0]) {
           node.push(c[1])
         }
@@ -76,11 +90,17 @@ function parseBackusNaurDefinition(g, type = null) {
         break loop
     }
   }
-  if (type) {
-    node.unshift(isAlternative ? 'or' : type)
-    if (isAlternative && 'group' !== type) {
-      return [type, node]
+  if (alt) {
+    if (node.length > 1)  {
+      alt.push(node)
     }
+    else {
+      alt.push(node[0])
+    }
+    return alt
+  }
+  if (type) {
+    node.unshift(type)
   }
   return node
 }
@@ -90,7 +110,8 @@ function parseBackusNaur(symbols) {
   const definitions = {}
   let definition
   while ((definition = parseBackusNaurDefinition(g)) && definition.length > 0) {
-    if ('Assign' === definition[0]) {
+    // console.log(definition)
+    if ('assign' === definition[0]) {
       definitions[definition[1]] = definition[2]
     }
     else {

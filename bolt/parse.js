@@ -1,76 +1,91 @@
-function parseRule(rule, g) {
-  let c
-  switch (rule[0]) {
-    case 'group':
+class Language {
+  constructor(lexemes = LanguageLexems, syntax = mathSyntax) {
+    this.lexems = lexemes
+    this.syntax = 'string' === typeof syntax ? parseBackusNaur(scan(syntax)) : syntax
   }
-}
 
-function parse(syntax, rule, g) {
-  let a
-  let c
-  let r
-  const result = []
-  rama: for (let i = 1; i < rule.length; i++) {
-    const element = rule[i]
-    const isLast = i === rule.length - 1
-    if (a = g.at(i)) {
-      if (a instanceof Array) {
-        for (const name in syntax) {
-          const sub = syntax[name]
-          if (sub instanceof Array) {
-            r = parse(syntax, sub, g.slice(i - 1))
-            if (true === r) {
-              continue rama
-            }
-            else if (r instanceof Array) {
-              a = r
-              break
-            }
-          }
+  parse(g) {
+    if ('string' === typeof g) {
+      g = generator(scan(g, this.lexems))
+    }
+    let output = []
+    g.index = 0
+    while(g.can()) {
+      let r
+      for (const name in this.syntax) {
+        r = this.parseRule(g, ...this.syntax[name])
+        if (r) {
+          g.index++
+          output.push(r)
+          break
         }
       }
-      c = a instanceof Array ? a[0] : a
-      switch (rule[0]) {
-        case 'or':
-          if (rule.indexOf(c) > 0) {
-            result.push(a)
-          }
-          break
+      if (!r) {
+        throw new Error('Rule not found')
+      }
+    }
+    return output
+  }
 
+  parseRule(g, name, ...rule) {
+    let c
+    let nodes = []
+    let isValidRule = true
+    let i = 0
+    // const index = g.index
+    loop: for (; rule[i] && (c = g.at(0)); i++) {
+      let part = rule[i]
+      const isLexeme = 'string' === typeof part && part in this.lexems
+      if ('string' === typeof part && !isLexeme) {
+        part = this.syntax[part]
+      }
+      if (!part) {
+        throw new Error('No rule ' + rule[i])
+      }
+      let node
+      if (isLexeme) {
+        const token = this.lexems[part]
+        node = 'string' === typeof token ? part : c
+      }
+      else {
+        node = this.parseRule(g, ...part)
+      }
+      let isValid = isLexeme || true === node || node.length > 0
+      if (isValid && true !== node) {
+        nodes.push(node)
+      }
+      switch (name) {
         case 'group':
-          if (c === element) {
-            result.push(a)
-          }
-          else {
-            return false
+          if (!isValid) {
+            isValidRule = false
+            break loop
           }
           break
 
         case 'opt':
-          if (c === element) {
-            result.push(a)
-          }
-          else if (0 === i) {
-            return true
-          }
           break
 
-        case 'repeat':
-          if (c === element) {
-            result.push(a)
+        case 'or':
+          isValidRule = isValid
+          if (isValid) {
+            break loop
           }
-          else if (isLast) {
-            i = 0
-          }
-          else {
-            return false
-          }
-          break
       }
     }
-    else {
-      return false
+    if ('opt' === name && nodes.length === 0) {
+      // g.index = index
+      return true
     }
+    if (!isValidRule) {
+      // g.index = index
+      return []
+    }
+    return 1 === nodes.length ? nodes[0] : nodes
   }
-  return result
+
+  parseToJSON(g) {
+    return JSON.stringify(this.parse(g), null, '\t')
+  }
 }
+
+const lang = new Language()

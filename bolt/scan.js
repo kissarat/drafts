@@ -1,5 +1,6 @@
 const BackusNaurLexemes = {
   Atom: /^\w+|^\d?\.\d+|^'([^']+)'|^"([^"]+)"/,
+  // Comment: /^#.*/,
   Space: /^\s+/m,
   GroupLeft: '(',
   GroupRight: ')',
@@ -9,11 +10,25 @@ const BackusNaurLexemes = {
   OptLeft: '[',
   OptRight: ']',
   End: ';',
+  Assign: '='
+}
+
+const LanguageLexems = {
+  Space: /^\s+/m,
+  Integer: /^\d+/,
+  Real: /^\d+\.\d+/,
+  Atom: /^[a-z]\w*/i,
   Assign: '=',
+  Add: '+',
+  Sub: '-',
+  Mult: '*',
+  Div: '/'
+
 }
 
 function scan(string, lexemes = BackusNaurLexemes) {
-  string = string.replace(/\s+/g, ' ')
+  string = string
+      .replace(/\s+/g, ' ')
   let s;
   let i = 0;
   const symbols = []
