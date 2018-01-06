@@ -74,3 +74,13 @@ function parse(syntax, rule, g) {
   }
   return result
 }
+
+function parseSyntax(syntax, array) {
+  const g = generator(array)
+  for (const name in syntax) {
+    const result = parse(syntax, syntax[name], g)
+    if (result) {
+      return result
+    }
+  }
+}

@@ -6,45 +6,36 @@ function range(max, min = 0) {
   return array
 }
 
-function generator(array, start = -1) {
-  function counter(control = 1) {
-    if (isFinite(control)) {
-      counter.index += control
-    }
-    return array[counter.index]
+function genArray(size) {
+  const array = []
+  for (let i = 0; i < size; i++) {
+    array.push(i)
   }
-
-  counter.index = start
-  counter.array = array
-  counter.slice = function (start = counter.index) {
-    if (start < 0) {
-      start += counter.index
-    }
-    return generator(counter.array, start)
-  }
-  counter.at = function (i) {
-    return counter.array[counter.index + i]
-  }
-  return counter
+  return array
 }
 
-function parseBackusNaurDefinition(g, type = null) {
+/**
+ * @param it Iterator
+ * @param type
+ * @returns {*}
+ */
+function parseBackusNaurDefinition(it, type = null) {
   let node = []
   let isAlternative = false
   let c
 
-  loop: while (c = g()) {
-    switch (c) {
+  loop: while (it.shift()) {
+    switch (it.current) {
       case 'RepeatLeft':
-        node.push(parseBackusNaurDefinition(g, 'repeat'))
+        node.push(parseBackusNaurDefinition(it, 'repeat'))
         break
 
       case 'OptLeft':
-        node.push(parseBackusNaurDefinition(g, 'opt'))
+        node.push(parseBackusNaurDefinition(it, 'opt'))
         break
 
       case 'GroupLeft':
-        node.push(parseBackusNaurDefinition(g, 'group'))
+        node.push(parseBackusNaurDefinition(it, 'group'))
         break
 
       case 'Or':
@@ -53,15 +44,15 @@ function parseBackusNaurDefinition(g, type = null) {
 
       case 'Assign':
         type = 'Assign'
-        node = [node[0], parseBackusNaurDefinition(g, 'group')]
+        node = [node[0], parseBackusNaurDefinition(it, 'group')]
         break loop
 
       default:
         // if ('string' === typeof c) {
         //   node.push(c)
         // }
-        if (c && 'Atom' === c[0]) {
-          node.push(c[1])
+        if ((it.current instanceof Array) && ('Atom' === it.current[0])) {
+          node.push(it.current[1])
         }
         else {
           throw new Error(c)
@@ -73,6 +64,7 @@ function parseBackusNaurDefinition(g, type = null) {
       case 'OptRight':
       case 'GroupRight':
       case 'End':
+      case 'Comment':
         break loop
     }
   }
@@ -86,15 +78,20 @@ function parseBackusNaurDefinition(g, type = null) {
 }
 
 function parseBackusNaur(symbols) {
-  const g = generator(symbols)
+  const it = new Iterator(symbols)
   const definitions = {}
   let definition
-  while ((definition = parseBackusNaurDefinition(g)) && definition.length > 0) {
-    if ('Assign' === definition[0]) {
-      definitions[definition[1]] = definition[2]
+  while ((definition = parseBackusNaurDefinition(it)) && !it.done) {
+    if (definition.length > 0) {
+      if ('Assign' === definition[0]) {
+        definitions[definition[1]] = definition[2]
+      }
+      else {
+        throw new Error('Unknown definition ' + JSON.stringify(definition))
+      }
     }
     else {
-      throw new Error('Unknown definition ' + JSON.stringify(definition))
+      // console.warn('Zero line')
     }
   }
   return definitions

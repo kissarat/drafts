@@ -10,6 +10,7 @@ const BackusNaurLexemes = {
   OptRight: ']',
   End: ';',
   Assign: '=',
+  Comment: '#'
 }
 
 function scan(string, lexemes = BackusNaurLexemes) {
