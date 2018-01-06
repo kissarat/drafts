@@ -28,11 +28,11 @@ class Language {
       //   }
       // }
       // for (let i = 0; i < 1; i++) {
-        r = this.parseRule(g, ...this.syntax.get('St'))
-        if (r) {
-          output.push(r)
-          break
-        }
+      r = this.parseRule(g, ...this.syntax.get('St'))
+      if (r) {
+        output.push(r)
+        // break
+      }
       // }
       if (!r) {
         throw new Error('Rule not found')
@@ -48,23 +48,21 @@ class Language {
     let i = 0
     loop: for (; rule[i] && (c = g.at(0)); i++) {
       let part = rule[i]
-      const isLexeme = 'string' === typeof part && this.lexemes.has(part)
-      if ('string' === typeof part && !isLexeme) {
-        part = this.syntax.get(part)
-      }
-      if (!part) {
-        throw new Error('No rule ' + rule[i])
-      }
       let node
-      if (isLexeme) {
+      let isValid = false
+      if ('string' === typeof part) {
         const token = this.lexemes.get(part)
-        node = 'string' === typeof token ? part : c
-        g.index++
+        if (token) {
+          isValid = token
+          node = 'string' === typeof token ? part : c
+          g.index++
+        }
+        else {
+          part = this.syntax.get(part)
+          node = this.parseRule(g, ...part)
+          isValid = node && (true === node || node.length > 0)
+        }
       }
-      else {
-        node = this.parseRule(g, ...part)
-      }
-      let isValid = isLexeme || true === node || node.length > 0
       if (isValid && true !== node) {
         nodes.push(node)
       }
