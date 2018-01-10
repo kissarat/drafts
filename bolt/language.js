@@ -62,11 +62,20 @@ class Rule extends Array {
 
   check(language, g) {
     const index = g.index
-    if (this.visitCheck(language, g)) {
-      return true
+    if (g.gas-- < 0) {
+      throw new Error('Out of gas')
     }
-    g.index = index
-    return false
+    if ('atom' === this.type) {
+      console.log('visit', g.index, this.first)
+    }
+    const result = this.visitCheck(language, g)
+    if ('atom' === this.type) {
+      console.log(this.first, g.index, result)
+    }
+    if (!result) {
+      g.index = index
+    }
+    return result
   }
 }
 
@@ -96,7 +105,8 @@ class AtomRule extends Rule {
 
   visitCheck(language, g) {
     const c = g.at(0)
-    const x = language.syntax.get(c.type)
+    const x = language.syntax.get(this.first)
+    // console.log('TYPE', c.type, this.first, x)
     if (x) {
       return x.check(language, g)
     }

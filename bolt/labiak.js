@@ -34,9 +34,10 @@ LabiakSyntaticVocabulary.string = `
   Number = Integer | Real ;
   Addictive = Add | Sub ;
   Op = Addictive | Mult | Div ;
-  Exp = Number Op Number | Exp Op Number | LeftRound Exp RightRound ;
+  Computable = Atom | Number ;
+  Exp = LeftRound Exp RightRound | Computable Op Computable | Computable Op Exp ;
   Define = Atom Assign Exp ;
-  St = Number | Exp | Define ;
+  St = Exp | Define;
 `
 
 class Labiak extends Language {
@@ -46,9 +47,9 @@ class Labiak extends Language {
 
   check(g) {
     const ar = Array.from(this.lexemes.parse(g))
-    console.log(ar)
     g = generator(ar)
     g()
+    g.gas = 300
     return this.syntax.check(this, g)
   }
 }
