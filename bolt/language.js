@@ -1,3 +1,12 @@
+function assert(truth, message, obj) {
+  if (!truth) {
+    if (obj) {
+      message += ' ' + JSON.stringify(obj)
+    }
+    throw new Error(message)
+  }
+}
+
 class Rule extends Array {
   get type() {
     return this[0]
@@ -28,6 +37,28 @@ class Rule extends Array {
   is(other) {
     return this.type === other.type
   }
+
+  toJSON() {
+    const result = [this.type]
+    for(let i = 1; i < this.length; i++) {
+      const r = this[i]
+      if (r instanceof AtomRule) {
+        result.push(r.toString())
+      }
+      else if (r instanceof Rule) {
+        result.push(r.toJSON())
+      }
+      else {
+        throw new Error('Unknown type ' + r)
+      }
+    }
+    return result
+  }
+
+  toString(pretty) {
+    const json = this.toJSON()
+    return pretty ? JSON.stringify(json, null, '  ') : JSON.stringify(json)
+  }
 }
 
 class GroupRule extends Rule {
@@ -54,6 +85,10 @@ class AtomRule extends Rule {
   constructor(...args) {
     super('atom', ...args)
   }
+
+  toString() {
+    return this.first
+  }
 }
 
 class OrRule extends Rule {
@@ -77,5 +112,17 @@ class RepeatRule extends Rule {
 class AssignRule extends Rule {
   constructor(...args) {
     super('assign', ...args)
+  }
+}
+
+class Language {
+  constructor(lexemes, syntax) {
+    this.lexemes = lexemes
+    this.syntax = syntax
+  }
+
+  parse(string) {
+    const g = this.lexemes.parse(string)
+    return this.syntax.parse(g)
   }
 }

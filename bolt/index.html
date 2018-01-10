@@ -3,26 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Bolt</title>
-    <script src="rule.js"></script>
-    <script src="iterator.js"></script>
+    <script src="language.js"></script>
     <script src="vocabulary.js"></script>
-    <script src="scan.js"></script>
-    <script src="parse-backus-naur.js"></script>
+    <script src="syntax.js"></script>
+    <script src="backus-naur.js"></script>
 </head>
 <body>
-<script>
-    // Positive = Integer | Real ;
-    // Number = [Addictive] Positive ;
-
-    const mathSyntax = `
-      Number = Integer | Real ;
-      Addictive = Add | Sub ;
-      Op = Addictive | Mult | Div ;
-      Exp = Number Op Number | Exp Op Number | LeftRound Exp RightRound ;
-      Define = Atom Assign Exp ;
-      St = Number | Exp | Define ;
-    `
-</script>
-<script src="parse.js"></script>
+<script src="labiak.js"></script>
 </body>
 </html>

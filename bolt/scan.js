@@ -1,30 +1,3 @@
-const Lexemes = {}
-
-Lexemes.BackusNaur = new LexicalVocabulary()
-Lexemes.BackusNaur.setRegex('Atom', /^\w+|^\d?\.\d+|^'([^']+)'|^"([^"]+)"/)
-Lexemes.BackusNaur.setRegex('Space', /^\s+/m)
-Lexemes.BackusNaur.setString('GroupLeft', '(')
-Lexemes.BackusNaur.setString('GroupRight', ')')
-Lexemes.BackusNaur.setString('Or', '|')
-Lexemes.BackusNaur.setString('RepeatLeft', '{')
-Lexemes.BackusNaur.setString('RepeatRight', '}')
-Lexemes.BackusNaur.setString('OptLeft', '[')
-Lexemes.BackusNaur.setString('OptRight', ']')
-Lexemes.BackusNaur.setString('End', ';')
-Lexemes.BackusNaur.setString('Assign', '=')
-
-Lexemes.Labiak = new LexicalVocabulary()
-Lexemes.Labiak.setRegex('Space', /^\s+/m)
-Lexemes.Labiak.setRegex('Real', /^\d+.\d+/)
-Lexemes.Labiak.setRegex('Integer', /^\d+/)
-Lexemes.Labiak.setRegex('Atom', /^[a-z]\w*/i)
-Lexemes.Labiak.setString('Assign', '=')
-Lexemes.Labiak.setString('Add', '+')
-Lexemes.Labiak.setString('Sub', '-')
-Lexemes.Labiak.setString('Mult', '*')
-Lexemes.Labiak.setString('Div', '*')
-Lexemes.Labiak.setString('LeftRound', '(')
-Lexemes.Labiak.setString('RightRound', ')')
 
 function scan(string, lexemes = Lexemes.BackusNaur) {
   string = string
