@@ -40,7 +40,7 @@ class Rule extends Array {
 
   toJSON() {
     const result = [this.type]
-    for(let i = 1; i < this.length; i++) {
+    for (let i = 1; i < this.length; i++) {
       const r = this[i]
       if (r instanceof AtomRule) {
         result.push(r.toString())
@@ -66,18 +66,13 @@ class GroupRule extends Rule {
     super('group', ...args)
   }
 
-  parse(nodes) {
-    const results = []
-    for (const rule of this) {
-      const result = rule.parse(rule)
-      if (result) {
-        results.push(result)
-      }
-      else {
+  check(g) {
+    for (let i = 1; i < this.length && g.can(); i++) {
+      if (!this[i].check(g)) {
         return false
       }
     }
-    return results
+    return true
   }
 }
 
@@ -89,17 +84,46 @@ class AtomRule extends Rule {
   toString() {
     return this.first
   }
+
+  check(g) {
+    if (this.type === g.at(0).type) {
+      return 1
+    }
+    return 0
+  }
 }
 
 class OrRule extends Rule {
   constructor(...args) {
     super('or', ...args)
   }
+
+  check(g) {
+    for (let i = 1; i < this.length && g.can(); i++) {
+      const v = this[i].check(g)
+      if (v) {
+        return v
+      }
+    }
+    return false
+  }
 }
 
 class OptRule extends Rule {
   constructor(...args) {
     super('opt', ...args)
+  }
+
+  check(g) {
+    if (!this.first.check(g)) {
+      return true
+    }
+    for (let i = 2; i < this.length && g.can(); i++) {
+      if (!this[i].check(g)) {
+        return false
+      }
+    }
+    return true
   }
 }
 

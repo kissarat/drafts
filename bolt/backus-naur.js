@@ -75,18 +75,17 @@ class BackusNaurSyntaticVocabulary extends SyntaticVocabulary {
     return node
   }
 
-  parse(g) {
+  *parse(g) {
     let definition
     while ((definition = this.parseDefinition(g, GroupRule)) && 'assign' === definition.type) {
       if ('assign' === definition.type) {
-        this.set(definition.first.toString(), definition.second)
+        yield definition
       }
       else {
         throw new Error('Unknown definition ' + JSON.stringify(definition))
       }
     }
   }
-
 }
 
 class BackusNaur extends Language {

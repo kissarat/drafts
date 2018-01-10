@@ -18,12 +18,19 @@ class LabiakLexicalVocabulary extends LexicalVocabulary {
 class LabiakSyntaticVocabulary extends SyntaticVocabulary {
   constructor(...args) {
     super(...args)
-    this.definition = new BackusNaur()
-    this.definition.parse(this.constructor.SYNTAX)
+    this.define()
+  }
+
+  get root() {
+    return this.get('St')
+  }
+
+  check(g) {
+    return this.root.check(g)
   }
 }
 
-LabiakSyntaticVocabulary.SYNTAX = `
+LabiakSyntaticVocabulary.string = `
   Number = Integer | Real ;
   Addictive = Add | Sub ;
   Op = Addictive | Mult | Div ;
@@ -35,6 +42,13 @@ LabiakSyntaticVocabulary.SYNTAX = `
 class Labiak extends Language {
   constructor() {
     super(new LabiakLexicalVocabulary(), new LabiakSyntaticVocabulary())
+  }
+
+  check(g) {
+    const ar = Array.from(this.lexemes.parse(g))
+    console.log(ar)
+    g = generator(ar)
+    return this.syntax.check(g)
   }
 }
 

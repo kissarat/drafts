@@ -10,6 +10,10 @@ class StringLexeme extends Lexeme {
       return this
     }
   }
+
+  toString() {
+    return this.type
+  }
 }
 
 class RegExpLexeme extends Lexeme {
@@ -22,7 +26,6 @@ class RegExpLexeme extends Lexeme {
 }
 
 class Vocabulary extends Map {
-
 }
 
 class LexicalVocabulary extends Vocabulary {
@@ -53,4 +56,8 @@ class LexicalVocabulary extends Vocabulary {
     }
   }
 
+  parseToJSON(string) {
+    return Array.from(this.parse(string))
+        .map(r => r instanceof StringLexeme ? r.toString() : [r.type, r.first])
+  }
 }
