@@ -25,8 +25,8 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
     return this.get('St')
   }
 
-  check(g) {
-    return this.root.check(g)
+  check(language, g) {
+    return this.root.check(language, g)
   }
 }
 
@@ -48,7 +48,8 @@ class Labiak extends Language {
     const ar = Array.from(this.lexemes.parse(g))
     console.log(ar)
     g = generator(ar)
-    return this.syntax.check(g)
+    g()
+    return this.syntax.check(this, g)
   }
 }
 

@@ -38,9 +38,10 @@ class BackusNaurSyntaticVocabulary extends SyntaticVocabulary {
           break
 
         case 'Or':
-          if ('or' !== node.type) {
-            alt = new OrRule(node.isMultiple ? node : node.first)
+          if (!alt) {
+            alt = new OrRule()
           }
+          alt.push(node.isMultiple ? node : node.first)
           node = new GroupRule()
           break
 

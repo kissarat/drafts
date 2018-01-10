@@ -59,6 +59,15 @@ class Rule extends Array {
     const json = this.toJSON()
     return pretty ? JSON.stringify(json, null, '  ') : JSON.stringify(json)
   }
+
+  check(language, g) {
+    const index = g.index
+    if (this.visitCheck(language, g)) {
+      return true
+    }
+    g.index = index
+    return false
+  }
 }
 
 class GroupRule extends Rule {
@@ -66,9 +75,9 @@ class GroupRule extends Rule {
     super('group', ...args)
   }
 
-  check(g) {
+  visitCheck(language, g) {
     for (let i = 1; i < this.length && g.can(); i++) {
-      if (!this[i].check(g)) {
+      if (!this[i].check(language, g)) {
         return false
       }
     }
@@ -85,11 +94,17 @@ class AtomRule extends Rule {
     return this.first
   }
 
-  check(g) {
-    if (this.type === g.at(0).type) {
-      return 1
+  visitCheck(language, g) {
+    const c = g.at(0)
+    const x = language.syntax.get(c.type)
+    if (x) {
+      return x.check(language, g)
     }
-    return 0
+    else if (this.first === c.type) {
+      g()
+      return true
+    }
+    return false
   }
 }
 
@@ -98,11 +113,10 @@ class OrRule extends Rule {
     super('or', ...args)
   }
 
-  check(g) {
+  visitCheck(language, g) {
     for (let i = 1; i < this.length && g.can(); i++) {
-      const v = this[i].check(g)
-      if (v) {
-        return v
+      if (this[i].check(language, g)) {
+        return true
       }
     }
     return false
@@ -114,12 +128,12 @@ class OptRule extends Rule {
     super('opt', ...args)
   }
 
-  check(g) {
-    if (!this.first.check(g)) {
+  visitCheck(language, g) {
+    if (!this.first.check(language, g)) {
       return true
     }
     for (let i = 2; i < this.length && g.can(); i++) {
-      if (!this[i].check(g)) {
+      if (!this[i].check(language, g)) {
         return false
       }
     }
