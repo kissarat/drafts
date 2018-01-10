@@ -32,18 +32,20 @@ function generator(array, start = -1) {
 }
 
 function parseBackusNaurDefinition(g, type = null) {
-  let node = []
+  let node = new Rule()
   let alt = false
   let c
 
   loop: while (c = g()) {
     switch (c) {
       case 'RepeatLeft':
-        node.push(parseBackusNaurDefinition(g, 'repeat'))
+        const repeat = parseBackusNaurDefinition(g, 'repeat')
+        node.push('or' === repeat.type ? new Rule('repeat', repeat) : repeat)
         break
 
       case 'OptLeft':
-        node.push(parseBackusNaurDefinition(g, 'opt'))
+        const opt = parseBackusNaurDefinition(g, 'opt')
+        node.push('or' === opt.type ? new Rule('opt', opt) : opt)
         break
 
       case 'GroupLeft':
@@ -53,7 +55,8 @@ function parseBackusNaurDefinition(g, type = null) {
       case 'Or':
         if ('or' !== type) {
           type = 'or'
-          alt = [type]
+          alt = new Rule()
+          alt.push(type)
         }
         if (node.length > 1)  {
           alt.push(node)
@@ -61,12 +64,12 @@ function parseBackusNaurDefinition(g, type = null) {
         else {
           alt.push(node[0])
         }
-        node = []
+        node = new Rule()
         break
 
       case 'Assign':
         type = 'assign'
-        node = [node[0], parseBackusNaurDefinition(g, 'group')]
+        node = new Rule(node[0], parseBackusNaurDefinition(g, 'group'))
         break loop
 
       default:
@@ -75,7 +78,7 @@ function parseBackusNaurDefinition(g, type = null) {
         // }
 
         if (c && 'Atom' === c[0]) {
-          node.push(c[1])
+          node.push(new Atom(c[1]))
         }
         else {
           throw new Error(c)

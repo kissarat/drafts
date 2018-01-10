@@ -1,3 +1,30 @@
+const rules = {
+  group(nodes) {
+    for (const node of nodes) {
+      if (!node.check(node)) {
+        return false
+      }
+    }
+    return nodes
+  },
+
+  or(nodes) {
+    for (const node of nodes) {
+      if (node.check(node)) {
+        return [node]
+      }
+    }
+  },
+
+  opt(nodes) {
+    for (const node of nodes) {
+      if (node.check(node)) {
+        return [node]
+      }
+    }
+  }
+}
+
 class Language {
   constructor(lexemes = Lexemes.Labiak, syntax = mathSyntax) {
     this.lexemes = lexemes
@@ -5,12 +32,16 @@ class Language {
     syntax = 'string' === typeof syntax ? parseBackusNaur(scan(syntax)) : syntax
     this.syntax = new Map()
     for (const [assign, name, [...rule]] of syntax) {
-      this.syntax.set(name, rule)
+      this.syntax.set(name.toString(), new Rule(...rule))
     }
   }
 
   scan(g) {
     return scan(g, this.lexemes)
+  }
+
+  getRule(string) {
+
   }
 
   parse(g) {
@@ -31,73 +62,46 @@ class Language {
     return output
   }
 
-  parseRule(g, name, ...rule) {
+  parseRule(g, name, ...rules) {
     if (this.gas-- <= 0) {
-      throw new Error('Out of gas', rule)
+      throw new Error('Out of gas', rules)
     }
-    let c
-    let nodes = []
-    let isValidRule = true
-    let i = 0
-    loop: for (; rule[i] && (c = g.at(0)); i++) {
-      let part = rule[i]
-      let node
-      const lexemeName = part instanceof Array ? part[0] : part
-      const isLexeme = this.lexemes.has(lexemeName)
-      let isValid = false
-      if (isLexeme) {
-        isValid = lexemeName === (c instanceof Array ? part[0] : part)
-        node = c
-        g.index++
-      }
-      else {
-        if ('string' === typeof part) {
-          part = this.syntax.get(part)
-        }
-        if (part instanceof Array) {
-          node = this.parseRule(g, ...part)
-          isValid = node && (true === node || node.length > 0)
-        }
-        else {
-          throw new Error('Rule is not array ' + JSON.stringify({part, i, rule}))
-        }
-      }
-      if (isValid && true !== node) {
-        nodes.push(node)
-      }
-      switch (name) {
-        case 'group':
-          if (!isValid) {
-            isValidRule = false
-            break loop
-          }
-          break
+    const c = g.at(0)
+    const isLexeme = this.lexemes.has(name)
+    if (isLexeme) {
+      return
+    }
+    let node
+    if ('string' === typeof c) {
+      node = this.syntax.get(c)
+      for(const rule of rules) {
 
-        case 'opt':
-          break
-
-        case 'or':
-          isValidRule = isValid
-          if (isValid) {
-            break loop
-          }
       }
     }
-    if ('opt' === name && nodes.length === 0) {
-      // g.index = index
-      return true
+    switch (name) {
+      case 'group':
+        break
+      case 'or':
+        break
+      case 'opt':
+        break
+      default:
+
     }
-    if (!isValidRule) {
-      // g.index = index
-      return []
-    }
-    // return nodes
-    return 1 === nodes.length ? nodes[0] : nodes
   }
 
   parseToJSON(g) {
     return JSON.stringify(this.parse(g), null, '\t')
   }
+}
+
+class Node {
+
+}
+
+class ArrayNode extends Node {
+
+
 }
 
 const lang = new Language()
