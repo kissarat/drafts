@@ -1,30 +1,3 @@
-const rules = {
-  group(nodes) {
-    for (const node of nodes) {
-      if (!node.check(node)) {
-        return false
-      }
-    }
-    return nodes
-  },
-
-  or(nodes) {
-    for (const node of nodes) {
-      if (node.check(node)) {
-        return [node]
-      }
-    }
-  },
-
-  opt(nodes) {
-    for (const node of nodes) {
-      if (node.check(node)) {
-        return [node]
-      }
-    }
-  }
-}
-
 class Language {
   constructor(lexemes = Lexemes.Labiak, syntax = mathSyntax) {
     this.lexemes = lexemes

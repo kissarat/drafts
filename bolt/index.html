@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Bolt</title>
-    <script src="scan.js"></script>
     <script src="rule.js"></script>
+    <script src="iterator.js"></script>
+    <script src="vocabulary.js"></script>
+    <script src="scan.js"></script>
     <script src="parse-backus-naur.js"></script>
 </head>
 <body>
@@ -18,7 +20,7 @@
       Op = Addictive | Mult | Div ;
       Exp = Number Op Number | Exp Op Number | LeftRound Exp RightRound ;
       Define = Atom Assign Exp ;
-      St = Number | [Exp | Define] | Define ;
+      St = Number | Exp | Define ;
     `
 </script>
 <script src="parse.js"></script>

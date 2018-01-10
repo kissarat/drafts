@@ -1,75 +1,35 @@
-function range(max, min = 0) {
-  const array = []
-  for (let i = min; i < max; i++) {
-    array.push(i)
-  }
-  return array
-}
 
-function generator(array, start = -1) {
-  function counter(control = 1) {
-    if (isFinite(control)) {
-      counter.index += control
-    }
-    return array[counter.index]
-  }
 
-  counter.index = start
-  counter.array = array
-  counter.can = function (i = 0) {
-    return counter.index + i < counter.array.length
-  }
-  counter.slice = function (start = counter.index) {
-    if (start < 0) {
-      start += counter.index
-    }
-    return generator(counter.array, start)
-  }
-  counter.at = function (i = 0) {
-    return counter.array[counter.index + i]
-  }
-  return counter
-}
-
-function parseBackusNaurDefinition(g, type = null) {
-  let node = new Rule()
+function parseBackusNaurDefinition(g, ruleClass) {
+  let node = new ruleClass()
   let alt = false
   let c
 
   loop: while (c = g()) {
     switch (c) {
       case 'RepeatLeft':
-        const repeat = parseBackusNaurDefinition(g, 'repeat')
-        node.push('or' === repeat.type ? new Rule('repeat', repeat) : repeat)
+        const repeat = parseBackusNaurDefinition(g, RepeatRule)
+        node.push('or' === repeat.type ? new RepeatRule(repeat) : repeat)
         break
 
       case 'OptLeft':
-        const opt = parseBackusNaurDefinition(g, 'opt')
-        node.push('or' === opt.type ? new Rule('opt', opt) : opt)
+        const opt = parseBackusNaurDefinition(g, OptRule)
+        node.push('or' === opt.type ? new OptRule(opt) : opt)
         break
 
       case 'GroupLeft':
-        node.push(parseBackusNaurDefinition(g, 'group'))
+        node.push(parseBackusNaurDefinition(g, GroupRule))
         break
 
       case 'Or':
-        if ('or' !== type) {
-          type = 'or'
-          alt = new Rule()
-          alt.push(type)
+        if ('or' !== node.type) {
+          alt = new OrRule(node.isMultiple ? node : node.first)
         }
-        if (node.length > 1)  {
-          alt.push(node)
-        }
-        else {
-          alt.push(node[0])
-        }
-        node = new Rule()
+        node = new GroupRule()
         break
 
       case 'Assign':
-        type = 'assign'
-        node = new Rule(node[0], parseBackusNaurDefinition(g, 'group'))
+        node = new AssignRule(node.first, parseBackusNaurDefinition(g, GroupRule))
         break loop
 
       default:
@@ -78,7 +38,7 @@ function parseBackusNaurDefinition(g, type = null) {
         // }
 
         if (c && 'Atom' === c[0]) {
-          node.push(new Atom(c[1]))
+          node.push(new AtomRule(c[1]))
         }
         else {
           throw new Error(c)
@@ -94,16 +54,13 @@ function parseBackusNaurDefinition(g, type = null) {
     }
   }
   if (alt) {
-    if (node.length > 1)  {
+    if (node.isMultiple) {
       alt.push(node)
     }
     else {
-      alt.push(node[0])
+      alt.push(node.first)
     }
     return alt
-  }
-  if (type) {
-    node.unshift(type)
   }
   return node
 }
@@ -112,9 +69,9 @@ function parseBackusNaur(symbols) {
   const g = generator(symbols)
   const definitions = []
   let definition
-  while ((definition = parseBackusNaurDefinition(g)) && definition.length > 0) {
+  while ((definition = parseBackusNaurDefinition(g, GroupRule)) && 'assign' === definition.type) {
     // console.log(definition)
-    if ('assign' === definition[0]) {
+    if ('assign' === definition.type) {
       definitions.push(definition)
     }
     else {
