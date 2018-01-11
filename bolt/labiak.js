@@ -15,6 +15,10 @@ class LabiakLexicalVocabulary extends LexicalVocabulary {
     this.setString('Div', '*')
     this.setString('LeftRound', '(')
     this.setString('RightRound', ')')
+    this.setString('LeftCurly', '{')
+    this.setString('RightCurly', '}')
+    this.setString('Terminator', ';')
+    this.setString('Less', '<')
   }
 }
 
@@ -74,6 +78,8 @@ class Exp extends Node {
         return first * second
       case 'Div':
         return first / second
+      case 'Less':
+        return first < second
       default:
         throw Error('Invalid operation ' + this.name)
     }
@@ -107,6 +113,24 @@ class Fork extends Node {
   }
 }
 
+class Block extends Node {
+  constructor(...array) {
+    array = array.slice(1, -1)
+    if (array.length > 1) {
+      array = [array[0], ...array[1].filter((a, i) => i % 2)]
+    }
+    super('Block', ...array)
+  }
+
+  eval(context) {
+    const local = Object.create(context)
+    for (let i = 1; i < this.length; i++) {
+      this[i].eval(local)
+    }
+    return local
+  }
+}
+
 class LabiakSyntaticVocabulary extends SyntaticVocabulary {
   constructor(...args) {
     super(...args)
@@ -115,6 +139,7 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
       Assignment,
       Exp,
       Fork,
+      Block,
 
       Group(array) {
         return array[1]
@@ -140,13 +165,12 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
 
 LabiakSyntaticVocabulary.string = `
   Number = Integer | Real ;
-  Ad = Add | Sub ;
-  Mu = Mult | Div ;
-  Op = Ad | Mu ;
+  Op = Add | Sub | Mult | Div | Less ;
   Cp = Atom | Number ;
+  Block = LeftCurly St {Terminator St} RightCurly ;
   Group = LeftRound Exp RightRound ;
-  Fork = If Exp Then Exp [Else Exp];
-  Exp = Fork | (Cp | Group) [ Op Exp ] ;
+  Fork = If Exp Then Exp [Else Exp] ;
+  Exp = Fork | Block | (Cp | Group) [ Op Exp ] ;
   Assignment = Atom Assign Exp ;
   St = Assignment | Exp ;
 `
