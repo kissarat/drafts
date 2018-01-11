@@ -65,13 +65,13 @@ class Rule extends Array {
     if (g.gas-- < 0) {
       throw new Error('Out of gas')
     }
-    // if ('atom' === this.type) {
-    //   console.log('visit', g.index, this.first)
-    // }
+    if (language.debug && 'atom' === this.type) {
+      console.log('visit', g.index, this.first)
+    }
     let result = this.visitCheck(language, g)
-    // if ('atom' === this.type) {
-    //   console.log(this.first, g.index, result)
-    // }
+    if (language.debug && 'atom' === this.type) {
+      console.log(this.first, g.index, result)
+    }
     if (!result) {
       g.index = index
       return false

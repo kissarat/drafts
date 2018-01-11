@@ -1,6 +1,9 @@
 class LabiakLexicalVocabulary extends LexicalVocabulary {
   constructor(...args) {
     super(...args)
+    this.setString('If', 'if')
+    this.setString('Then', 'then')
+    this.setString('Else', 'else')
     this.setRegExp('Space', /^\s+/m)
     this.setRegExp('Integer', /^\d+/)
     this.setRegExp('Real', /^\d+\.\d+/)
@@ -27,6 +30,10 @@ class Node extends Array {
   get second() {
     return this[2]
   }
+
+  get third() {
+    return this[3]
+  }
 }
 
 Node.isNode = true
@@ -52,8 +59,8 @@ class Exp extends Node {
   eval(context) {
     const first = 'function' === typeof this.first.eval ? this.first.eval(context) : this.first
     const second = 'function' === typeof this.second.eval ? this.second.eval(context) : this.second
-    if (first.eval) {
-      if (second.eval) {
+    if ('function' === typeof first.eval) {
+      if ('function' === typeof second.eval) {
         return this
       }
       return new Exp(this.name, first, second)
@@ -73,6 +80,33 @@ class Exp extends Node {
   }
 }
 
+class Fork extends Node {
+  constructor(...array) {
+    if ('If' === array[0].type) {
+      if (4 === array.length) {
+        super('If', array[1], array[3])
+      }
+      else {
+        super('If', array[1], array[3], array[4][1])
+      }
+    }
+    else {
+      super('If', ...array)
+    }
+  }
+
+  eval(context) {
+    const first = this.first.eval(context)
+    const second = 'function' === typeof this.second.eval ? this.second.eval(context) : this.second
+    if ('function' === typeof first.eval) {
+      return this.third
+          ? new Fork(first, this.second.eval(context))
+          : new Fork(first, this.second.eval(context), this.third.eval(context))
+    }
+    return first ? second : 'function' === typeof this.third.eval ? this.third.eval(context) : this.third
+  }
+}
+
 class LabiakSyntaticVocabulary extends SyntaticVocabulary {
   constructor(...args) {
     super(...args)
@@ -80,6 +114,7 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
     this.rules = {
       Assignment,
       Exp,
+      Fork,
 
       Group(array) {
         return array[1]
@@ -110,9 +145,10 @@ LabiakSyntaticVocabulary.string = `
   Op = Ad | Mu ;
   Cp = Atom | Number ;
   Group = LeftRound Exp RightRound ;
-  Exp = (Cp | Group) [ Op Exp ];
+  Fork = If Exp Then Exp [Else Exp];
+  Exp = Fork | (Cp | Group) [ Op Exp ] ;
   Assignment = Atom Assign Exp ;
-  St = Assignment | Exp ; ;
+  St = Assignment | Exp ;
 `
 
 class Labiak extends Language {
@@ -128,6 +164,11 @@ class Labiak extends Language {
     const result = this.syntax.check(this, g)
     console.log('GAS: ' + (1300 - g.gas))
     return result
+  }
+
+  eval(string, context = {}) {
+    const tree = this.check(string)
+    return tree.eval(context)
   }
 }
 
