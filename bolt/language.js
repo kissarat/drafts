@@ -85,12 +85,17 @@ class GroupRule extends Rule {
   }
 
   visitCheck(language, g) {
+    const results = []
     for (let i = 1; i < this.length; i++) {
-      if (!this[i].check(language, g)) {
+      const result = this[i].check(language, g)
+      if (result) {
+        results.push(result)
+      }
+      else {
         return false
       }
     }
-    return true
+    return results
   }
 }
 
@@ -115,7 +120,7 @@ class AtomRule extends Rule {
     }
     else if (this.first === c.type) {
       g()
-      return true
+      return c
     }
     return false
   }
@@ -128,8 +133,9 @@ class OrRule extends Rule {
 
   visitCheck(language, g) {
     for (let i = 1; i < this.length; i++) {
-      if (this[i].check(language, g)) {
-        return true
+      const result = this[i].check(language, g)
+      if (result) {
+        return result
       }
     }
     return false
@@ -145,14 +151,19 @@ class OptRule extends Rule {
     // if (!this.first.check(language, g)) {
     //   return true
     // }
+    const results = []
     const index = g.index
     for (let i = 1; i < this.length; i++) {
-      if (!this[i].check(language, g)) {
+      const result = this[i].check(language, g)
+      if (result) {
+        results.push(result)
+      }
+      else {
         g.index = index
         return true
       }
     }
-    return true
+    return results
   }
 }
 
