@@ -142,12 +142,14 @@ class OptRule extends Rule {
   }
 
   visitCheck(language, g) {
-    if (!this.first.check(language, g)) {
-      return true
-    }
-    for (let i = 2; i < this.length; i++) {
+    // if (!this.first.check(language, g)) {
+    //   return true
+    // }
+    const index = g.index
+    for (let i = 1; i < this.length; i++) {
       if (!this[i].check(language, g)) {
-        return false
+        g.index = index
+        return true
       }
     }
     return true

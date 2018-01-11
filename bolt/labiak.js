@@ -2,7 +2,7 @@ class LabiakLexicalVocabulary extends LexicalVocabulary {
   constructor(...args) {
     super(...args)
     this.setRegExp('Space', /^\s+/m)
-    this.setRegExp('Real', /^\d+.\d+/)
+    this.setRegExp('Real', /^\d+\.\d+/)
     this.setRegExp('Integer', /^\d+/)
     this.setRegExp('Atom', /^[a-z]\w*/i)
     this.setString('Assign', '=')
@@ -26,7 +26,8 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
   }
 
   check(language, g) {
-    return this.root.check(language, g)
+    const result = this.root.check(language, g)
+    return result && g.index >= g.array.length
   }
 }
 
@@ -35,9 +36,8 @@ LabiakSyntaticVocabulary.string = `
   Addictive = Add | Sub ;
   Op = Addictive | Mult | Div ;
   Computable = Atom | Number ;
-  Exp = LeftRound Exp RightRound | Computable Op Exp | Computable;
-  Define = Atom Assign Exp ;
-  St = Exp | Define;
+  Exp = (LeftRound Exp RightRound | Computable) [Op Exp];
+  St = [Atom Assign] Exp ;
 `
 
 class Labiak extends Language {
@@ -64,10 +64,18 @@ function assertStatement(truth, s) {
 
 function labiakTest() {
   assertStatement(true, '1')
+  assertStatement(false, '1 1')
   assertStatement(true, 'a')
-  assertStatement(true, '(a)')
+  assertStatement(false, '(a')
+  assertStatement(false, 'a)')
   assertStatement(true, '(a + b)')
   assertStatement(true, '(1 + b)')
   assertStatement(false, '1 (1 + b)')
   assertStatement(false, '()')
+  assertStatement(false, '(+)')
+  assertStatement(true, 'a = 1')
+  assertStatement(false, '(a) = 1')
+  assertStatement(false, 'a = = 1')
+  assertStatement(true, '(1 + b) * c')
+  assertStatement(false, '(1 = b) * c')
 }
