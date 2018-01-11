@@ -43,15 +43,21 @@ class Assignment extends Node {
 
 class Exp extends Node {
   constructor(...array) {
-    if (array[1][0] instanceof StringLexeme) {
+    if ('string' !== array[0] && array[1][0] instanceof StringLexeme) {
       array = [array[1][0].type, array[0], ...array[1].slice(1)]
     }
     super(...array)
   }
 
   eval(context) {
-    const first = this.first.eval(context)
-    const second = this.second.eval(context)
+    const first = 'function' === typeof this.first.eval ? this.first.eval(context) : this.first
+    const second = 'function' === typeof this.second.eval ? this.second.eval(context) : this.second
+    if (first.eval) {
+      if (second.eval) {
+        return this
+      }
+      return new Exp(this.name, first, second)
+    }
     switch (this.name) {
       case 'Add':
         return first + second
@@ -120,7 +126,7 @@ class Labiak extends Language {
     g()
     g.gas = 1300
     const result = this.syntax.check(this, g)
-    console.log(g.gas)
+    console.log('GAS: ' + (1300 - g.gas))
     return result
   }
 }

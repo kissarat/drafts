@@ -28,7 +28,8 @@ class Token extends String {
 
 class Atom extends Token {
   eval(context) {
-    return context[this.toString()]
+    const key = this.toString()
+    return key in context ? context[key] : this
   }
 }
 
