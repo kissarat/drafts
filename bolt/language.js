@@ -85,7 +85,7 @@ class GroupRule extends Rule {
   }
 
   visitCheck(language, g) {
-    for (let i = 1; i < this.length && g.can(); i++) {
+    for (let i = 1; i < this.length; i++) {
       if (!this[i].check(language, g)) {
         return false
       }
@@ -104,6 +104,9 @@ class AtomRule extends Rule {
   }
 
   visitCheck(language, g) {
+    if (!g.can()) {
+      return false
+    }
     const c = g.at(0)
     const x = language.syntax.get(this.first)
     // console.log('TYPE', c.type, this.first, x)
@@ -124,7 +127,7 @@ class OrRule extends Rule {
   }
 
   visitCheck(language, g) {
-    for (let i = 1; i < this.length && g.can(); i++) {
+    for (let i = 1; i < this.length; i++) {
       if (this[i].check(language, g)) {
         return true
       }
@@ -142,7 +145,7 @@ class OptRule extends Rule {
     if (!this.first.check(language, g)) {
       return true
     }
-    for (let i = 2; i < this.length && g.can(); i++) {
+    for (let i = 2; i < this.length; i++) {
       if (!this[i].check(language, g)) {
         return false
       }

@@ -35,7 +35,7 @@ LabiakSyntaticVocabulary.string = `
   Addictive = Add | Sub ;
   Op = Addictive | Mult | Div ;
   Computable = Atom | Number ;
-  Exp = LeftRound Exp RightRound | Computable Op Computable | Computable Op Exp ;
+  Exp = LeftRound Exp RightRound | Computable Op Exp | Computable Op Computable | Computable;
   Define = Atom Assign Exp ;
   St = Exp | Define;
 `
