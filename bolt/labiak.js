@@ -35,7 +35,7 @@ LabiakSyntaticVocabulary.string = `
   Addictive = Add | Sub ;
   Op = Addictive | Mult | Div ;
   Computable = Atom | Number ;
-  Exp = LeftRound Exp RightRound | Computable Op Exp | Computable Op Computable | Computable;
+  Exp = LeftRound Exp RightRound | Computable Op Exp | Computable;
   Define = Atom Assign Exp ;
   St = Exp | Define;
 `
@@ -55,3 +55,19 @@ class Labiak extends Language {
 }
 
 const l = new Labiak()
+
+function assertStatement(truth, s) {
+  if (truth !== l.check(s)) {
+    throw new Error(s)
+  }
+}
+
+function labiakTest() {
+  assertStatement(true, '1')
+  assertStatement(true, 'a')
+  assertStatement(true, '(a)')
+  assertStatement(true, '(a + b)')
+  assertStatement(true, '(1 + b)')
+  assertStatement(false, '1 (1 + b)')
+  assertStatement(false, '()')
+}
