@@ -68,12 +68,19 @@ class Rule extends Array {
     if ('atom' === this.type) {
       console.log('visit', g.index, this.first)
     }
-    const result = this.visitCheck(language, g)
+    let result = this.visitCheck(language, g)
     if ('atom' === this.type) {
       console.log(this.first, g.index, result)
     }
     if (!result) {
       g.index = index
+      return false
+    }
+    if (result instanceof Array) {
+      result = result.filter(r => true !== r)
+      if (1 === result.length) {
+        return result[0]
+      }
     }
     return result
   }
