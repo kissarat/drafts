@@ -16,11 +16,41 @@ class StringLexeme extends Lexeme {
   }
 }
 
+class Token extends String {
+  get type() {
+    return this.constructor.name
+  }
+
+  replace(s) {
+    return s.slice(this.length)
+  }
+}
+
+class Atom extends Token {
+  eval(context) {
+    return context[this.toString()]
+  }
+}
+
+class Number extends Token {
+  eval() {
+    return +this.toString()
+  }
+}
+
+const tokens = {
+  Atom,
+  Integer: class Integer extends Number {},
+  Real: class Real extends Number {},
+}
+
 class RegExpLexeme extends Lexeme {
   match(s) {
     const m = this.first.exec(s)
     if (m) {
-      return new Lexeme(this.type, m.length > 1 ? m[1] || m[2] || m[3] || m[4] || m[5] || m[0] : m[0])
+      const tokenClass = tokens[this.type]
+      const raw = m.length > 1 ? m[1] || m[2] || m[3] || m[4] || m[5] || m[0] : m[0]
+      return tokenClass ? new tokenClass(raw) : new Lexeme(this.type, raw)
     }
   }
 }

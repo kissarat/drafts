@@ -50,7 +50,7 @@ class BackusNaurSyntaticVocabulary extends SyntaticVocabulary {
           break loop
 
         case 'Atom':
-          node.push(new AtomRule(c.first))
+          node.push(new AtomRule(c.toString()))
           break
 
         default:

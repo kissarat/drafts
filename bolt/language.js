@@ -132,7 +132,7 @@ class AtomRule extends Rule {
           const name = this.first
           const rule = language.syntax.rules[name]
           if (rule) {
-            result = rule(result)
+            result = rule.isNode ? new rule(...result) : rule(result)
           }
           else {
             result.unshift(name)

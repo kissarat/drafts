@@ -15,25 +15,69 @@ class LabiakLexicalVocabulary extends LexicalVocabulary {
   }
 }
 
+class Node extends Array {
+  get name() {
+    return this[0]
+  }
+
+  get first() {
+    return this[1]
+  }
+
+  get second() {
+    return this[2]
+  }
+}
+
+Node.isNode = true
+
+class Assignment extends Node {
+  constructor(...array) {
+    super(array[0].toString(), ...array.slice(2))
+  }
+
+  eval(context) {
+    return context[this.name] = this.first.eval(context)
+  }
+}
+
+class Exp extends Node {
+  constructor(...array) {
+    if (array[1][0] instanceof StringLexeme) {
+      array = [array[1][0].type, array[0], ...array[1].slice(1)]
+    }
+    super(...array)
+  }
+
+  eval(context) {
+    const first = this.first.eval(context)
+    const second = this.second.eval(context)
+    switch (this.name) {
+      case 'Add':
+        return first + second
+      case 'Sub':
+        return first - second
+      case 'Mult':
+        return first * second
+      case 'Div':
+        return first / second
+      default:
+        throw Error('Invalid operation ' + this.name)
+    }
+  }
+}
+
 class LabiakSyntaticVocabulary extends SyntaticVocabulary {
   constructor(...args) {
     super(...args)
     this.define()
     this.rules = {
-      Assignment(array) {
-        return [array[0], ...array.slice(2)]
-      },
+      Assignment,
+      Exp,
 
       Group(array) {
         return array[1]
       },
-
-      Exp (array) {
-        if (array[1][0] instanceof StringLexeme) {
-          return [array[1][0], array[0], ...array[1].slice(1)]
-        }
-        return array
-      }
     }
   }
 
