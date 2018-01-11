@@ -1,3 +1,8 @@
+if ('undefined' !== typeof module) {
+  var {Rule} = require('./language')
+  var {Vocabulary, Lexeme} = require('./vocabulary')
+}
+
 class Lexeme extends Rule {
   replace(s) {
     return s.slice(this.first.length)
@@ -90,5 +95,18 @@ class LexicalVocabulary extends Vocabulary {
   parseToJSON(string) {
     return Array.from(this.parse(string))
         .map(r => r instanceof StringLexeme ? r.toString() : [r.type, r.first])
+  }
+}
+
+if ('undefined' !== typeof module) {
+  module.exports = {
+    Lexeme,
+    StringLexeme,
+    Token,
+    Atom,
+    Number,
+    RegExpLexeme,
+    Vocabulary,
+    LexicalVocabulary,
   }
 }

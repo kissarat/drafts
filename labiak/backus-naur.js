@@ -1,3 +1,8 @@
+if ('undefined' !== typeof module) {
+  var {LexicalVocabulary, SyntaticVocabulary} = require('./vocabulary')
+}
+
+
 class BackusNaurLexicalVocabulary extends LexicalVocabulary {
   constructor(...args) {
     super(...args)
@@ -95,4 +100,10 @@ class BackusNaur extends Language {
   }
 }
 
-const backus = new BackusNaur()
+if ('undefined' !== typeof module) {
+  module.exports = {
+    BackusNaurLexicalVocabulary,
+    BackusNaurSyntaticVocabulary,
+    BackusNaur
+  }
+}

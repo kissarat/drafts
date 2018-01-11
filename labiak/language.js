@@ -231,3 +231,16 @@ class Language {
     return this.syntax.parse(g)
   }
 }
+
+if ('undefined' !== typeof module) {
+  module.exports = {
+    Rule,
+    GroupRule,
+    AtomRule,
+    RepeatRule,
+    OrRule,
+    OptRule,
+    AssignRule,
+    Language
+  }
+}
