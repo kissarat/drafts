@@ -41,7 +41,7 @@ class BackusNaurSyntaticVocabulary extends SyntaticVocabulary {
           if (!alt) {
             alt = new OrRule()
           }
-          alt.push(node.isMultiple ? node : node.first)
+          alt.push(node.isMultiple ? new GroupRule(...node.slice(1)) : node.first)
           node = new GroupRule()
           break
 

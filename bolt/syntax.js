@@ -8,8 +8,7 @@ class SyntaticVocabulary extends Vocabulary {
 
   toJSON() {
     const o = {}
-    for(const [key, value] of this) {
-      console.log(value)
+    for(const [key, value] of this) {console.log(value)
       o[key] = value.toJSON()
     }
     return o

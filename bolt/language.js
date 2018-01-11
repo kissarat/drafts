@@ -65,22 +65,25 @@ class Rule extends Array {
     if (g.gas-- < 0) {
       throw new Error('Out of gas')
     }
-    if ('atom' === this.type) {
-      console.log('visit', g.index, this.first)
-    }
+    // if ('atom' === this.type) {
+    //   console.log('visit', g.index, this.first)
+    // }
     let result = this.visitCheck(language, g)
-    if ('atom' === this.type) {
-      console.log(this.first, g.index, result)
-    }
+    // if ('atom' === this.type) {
+    //   console.log(this.first, g.index, result)
+    // }
     if (!result) {
       g.index = index
       return false
     }
-    if (result instanceof Array) {
+    if (result.constructor === Array) {
       result = result.filter(r => true !== r)
       if (1 === result.length) {
         return result[0]
       }
+      // else if (2 === result.length) {
+      //   return [result[0], ...result[1]]
+      // }
     }
     return result
   }
@@ -123,7 +126,20 @@ class AtomRule extends Rule {
     const x = language.syntax.get(this.first)
     // console.log('TYPE', c.type, this.first, x)
     if (x) {
-      return x.check(language, g)
+      let result = x.check(language, g)
+      if (result) {
+        if (result.constructor === Array) {
+          const name = this.first
+          const rule = language.syntax.rules[name]
+          if (rule) {
+            result = rule(result)
+          }
+          else {
+            result.unshift(name)
+          }
+        }
+        return result
+      }
     }
     else if (this.first === c.type) {
       g()
@@ -155,9 +171,6 @@ class OptRule extends Rule {
   }
 
   visitCheck(language, g) {
-    // if (!this.first.check(language, g)) {
-    //   return true
-    // }
     const results = []
     const index = g.index
     for (let i = 1; i < this.length; i++) {
@@ -177,6 +190,27 @@ class OptRule extends Rule {
 class RepeatRule extends Rule {
   constructor(...args) {
     super('repeat', ...args)
+  }
+
+  visitCheck(language, g) {
+    const results = []
+    loop: while (true) {
+      const index = g.index
+      for (let i = 1; i < this.length; i++) {
+        const result = this[i].check(language, g)
+        if (result) {
+          results.push(result)
+        }
+        else {
+          g.index = index
+          break loop
+        }
+      }
+    }
+    if (results.length > 0) {
+      return results
+    }
+    return true
   }
 }
 
