@@ -1,6 +1,6 @@
-if ('undefined' !== typeof module) {
-  var {Vocabulary} = require('./vocabulary')
-}
+// if ('undefined' !== typeof module) {
+  // var {Vocabulary} = require('./vocabulary')
+// }
 
 
 class SyntaticVocabulary extends Vocabulary {
@@ -26,8 +26,8 @@ class SyntaticVocabulary extends Vocabulary {
   }
 }
 
-if ('undefined' !== typeof module) {
-  module.exports = {
-    SyntaticVocabulary
-  }
-}
+// if ('undefined' !== typeof module) {
+//   module.exports = {
+//     SyntaticVocabulary
+//   }
+// }

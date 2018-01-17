@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="https://cdn.rawgit.com/alemangui/pizzicato/master/distr/Pizzicato.min.js"></script>
+</head>
+<body>
+<audio></audio>
+<script>
+    // const a = document.querySelector('audio')
+    const c = new AudioContext()
+    const DURATION = 1 / 8
+    const s = c.createBufferSource()
+    s.connect(c.destination)
+    s.start(0)
+
+    const A1 = 440 * 2 ** (-57 / 12)
+
+    const OCTAVE = [0, 2, 4, 5, 7, 9, 11]
+
+    function getWave(size = 6) {
+        const real = new Float32Array(size)
+        const imag = new Float32Array(size)
+        for (let i = 0; i < size; i++) {
+            real[i] = i % 3 ? 0 : Math.PI / 4
+            imag[i] = i % 3 ? 0 : Math.PI / 4
+        }
+        return c.createPeriodicWave(real, imag)
+    }
+
+    function* octave(n = 0) {
+        for (const m of OCTAVE) {
+            yield 2 ** n * A1 * 2 ** (m / 12)
+        }
+    }
+
+    function at(i) {
+        return 12 * Math.floor(i / OCTAVE.length) + OCTAVE[i % OCTAVE.length]
+    }
+
+    function* half(n = 96) {
+        for (let i = 0; i < n; i++) {
+            yield A1 * 2 ** (i / 12)
+        }
+    }
+
+    function* all() {
+        for (let i = 0; i < 8; i++) {
+            yield octave(i)
+        }
+    }
+
+    function tone(n = 1) {
+        return 2 ** (n / 6)
+    }
+
+    class List extends Array {
+        constructor(a) {
+            if (1 === arguments.length && 'number' !== typeof a) {
+                super(...Array.from(a))
+            }
+            else {
+                super(...arguments)
+            }
+        }
+
+        static octave(n) {
+            return new List(octave(n))
+        }
+
+        octave(n = 0) {
+            return this.recursive(f => A1 * 2 ** ((f + n * 12) / 12))
+        }
+
+        generate(max, gen = generate) {
+            let i = 0
+            const result = new (this.constructor)()
+            for (const n of gen(this)) {
+                if (i < max) {
+                    result.push(n)
+                }
+                else {
+                    break
+                }
+                i++
+            }
+            return result
+        }
+
+        recursive(cb) {
+            return this.map((a, i) => a instanceof Array ? a.recursive(cb) : cb(a, i))
+        }
+
+        scale(n) {
+            return this.recursive(f => f * n)
+        }
+
+        tone(n) {
+            return this.scale(tone(n))
+        }
+
+        set(options) {
+            return Object.assign(this, options)
+        }
+
+        play(delay = 0) {
+            if (this.delay > 0) {
+                delay += this.delay
+            }
+            const duration = this.duration || DURATION
+            for (const f of this) {
+                if (f instanceof List) {
+                    delay += f.play(delay)
+                }
+                else {
+                    note(f, delay, duration)
+                    delay += duration
+                }
+            }
+            return delay
+        }
+
+        parallel() {
+            return new Parallel(...this)
+        }
+
+        replace(start, deleteCount, ...array) {
+            this.splice(...arguments)
+            return this
+        }
+
+        compress(shift) {
+            return this.filter((t, i) => 0 === i % shift)
+        }
+
+        mix(list, shift = 2, n = 1) {
+            const result = new (this.constructor)()
+            for (let i = n; i < this.length + n; i++) {
+                if (i % shift === 0) {
+                    result.push(list[i % list.length])
+                }
+                else {
+                    result.push(this[i - n])
+                }
+            }
+            return result
+        }
+
+        duplicate(cb = i => i) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < this.length; i++) {
+                result.push(this[i], cb(this[i]))
+
+            }
+            return result
+        }
+
+        compose(n) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < this.length; i += n) {
+                result.push(new (this.constructor)(...this.slice(i, i + n)))
+            }
+            return result
+        }
+
+        append(n = 2, cb = i => i) {
+            const result = new (this.constructor)()
+            for (let i = 1; i <= this.length; i++) {
+                if (i % n === 0) {
+                    result.push(cb(this[i - 1]))
+                }
+                result.push(this[i - 1])
+            }
+            return result
+        }
+
+        dimension(array) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < this.length; i++) {
+                result.push(...array.map(a => a + i))
+            }
+            return result
+        }
+    }
+
+    class Range extends List {
+        static create(n) {
+            const list = new Range()
+            for (let i = 0; i < n; i++) {
+                list.push(at(i))
+            }
+            return list
+        }
+
+        static simple(n, m = 0) {
+            const list = new Range(n)
+            list.fill(m)
+            return list
+        }
+
+        tone(n) {
+            return this.recursive(f => f + n)
+        }
+    }
+
+    class Parallel extends List {
+        play(delay = 0) {
+            let delta = 0
+            let result = delta
+            for (const f of this) {
+                if (f instanceof List) {
+                    delta = f.play(delay)
+                }
+                else {
+                    note(f, delay)
+                    delta = DURATION
+                }
+                result = Math.max(delta, result)
+            }
+            return result
+        }
+    }
+
+    const NOTES = Array.from(all()).map(o => Array.from(o))
+    const TONES = NOTES.reduce((a, arr) => a.concat(arr), [])
+    const HALF = Array.from(half())
+
+    const wave = getWave()
+
+    function note(frequency, delay = 0, duration = DURATION) {
+        const o = c.createOscillator()
+        o.frequency.value = frequency
+        const time = delay + c.currentTime
+        o.setPeriodicWave(wave)
+        o.start(time)
+        o.stop(time + duration)
+        o.connect(c.destination)
+    }
+
+    function* natural(m, n = 1) {
+        for (let i = 0; i < m; i++) {
+            yield i * n
+        }
+    }
+
+    function* generate(list = List.octave(4)) {
+        while (true) {
+            yield* list
+            list = list.reverse().tone(1)
+        }
+    }
+</script>
+</body>
+</html>

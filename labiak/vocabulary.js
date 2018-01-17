@@ -1,7 +1,6 @@
-if ('undefined' !== typeof module) {
-  var {Rule} = require('./language')
-  var {Vocabulary, Lexeme} = require('./vocabulary')
-}
+// if ('undefined' !== typeof module) {
+//   var {Rule} = require('./language')
+// }
 
 class Lexeme extends Rule {
   replace(s) {
@@ -98,15 +97,15 @@ class LexicalVocabulary extends Vocabulary {
   }
 }
 
-if ('undefined' !== typeof module) {
-  module.exports = {
-    Lexeme,
-    StringLexeme,
-    Token,
-    Atom,
-    Number,
-    RegExpLexeme,
-    Vocabulary,
-    LexicalVocabulary,
-  }
-}
+// if ('undefined' !== typeof module) {
+//   module.exports = {
+//     Lexeme,
+//     StringLexeme,
+//     Token,
+//     Atom,
+//     Number,
+//     RegExpLexeme,
+//     Vocabulary,
+//     LexicalVocabulary,
+//   }
+// }

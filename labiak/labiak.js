@@ -46,19 +46,6 @@ class Node extends Array {
 
 Node.isNode = true
 
-class Assignment extends Node {
-  constructor(...array) {
-    if ('Terminator' === array[array.length - 1].type) {
-      array.pop()
-    }
-    super(array[0].toString(), ...array.slice(2))
-  }
-
-  eval(context) {
-    return context[this.name] = this.first.eval(context)
-  }
-}
-
 class Exp extends Node {
   constructor(...array) {
     if ('string' !== array[0] && array[1][0] instanceof StringLexeme) {
@@ -138,7 +125,7 @@ class Block extends Node {
 class Apply extends Node {
   constructor(...array) {
     const p = []
-    for(const a of array) {
+    for (const a of array) {
       if (a.constructor === Array) {
         p.push(...a)
       }
@@ -150,7 +137,7 @@ class Apply extends Node {
   }
 
   eval(context) {
-    for(let i = 1; i < this.length; i++) {
+    for (let i = 1; i < this.length; i++) {
       context = this[i].eval(context)
       if ('function' === typeof context.eval) {
         return context
@@ -162,11 +149,13 @@ class Apply extends Node {
 
 class List extends Node {
   constructor(...array) {
-    super('List', ...array)
+    super('List', ...array.filter(a => 'Terminator' !== a.type))
   }
 
   eval(context) {
-
+    for (let i = 1; i < this.length; i++) {
+      this[i].eval(context)
+    }
   }
 }
 
@@ -175,7 +164,7 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
     super(...args)
     this.define()
     this.rules = {
-      Assignment,
+      Apply,
       Exp,
       Fork,
       Block,
@@ -188,7 +177,7 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
   }
 
   get root() {
-    return this.get('List')
+    return this.get('Exp')
   }
 
   check(language, g) {
@@ -205,16 +194,12 @@ class LabiakSyntaticVocabulary extends SyntaticVocabulary {
 
 LabiakSyntaticVocabulary.string = `
   Number = Integer | Real ;
-  Op = Add | Sub | Mult | Div | Less ;
+  Op = Add | Sub | Mult | Div | Assign | Less | Terminator;
   Cp = Atom | Number ;
-  Block = LeftCurly Array RightCurly ;
-  Apply = {Atom} Block | Atom Atom {Atom};
+  Block = LeftCurly Exp RightCurly ;
   Group = LeftRound Exp RightRound ;
   Fork = If Exp Then Exp [Else Exp] ;
-  Exp = Block | Apply | Fork | (Cp | Group) [Op Exp];
-  Assignment = Atom Assign Exp [Terminator] ;
-  St = Assignment | Exp ;
-  Array = {St} ;
+  Exp = Fork | (Cp | Group) [Op Exp] ;
 `
 
 class Labiak extends Language {
@@ -228,26 +213,13 @@ class Labiak extends Language {
     g()
     g.gas = 1300
     const result = this.syntax.check(this, g)
-    console.log('GAS: ' + (1300 - g.gas))
+    // console.log('GAS: ' + (1300 - g.gas))
     return result
   }
 
   eval(string, context = {}) {
     const tree = this.check(string)
-    if (tree instanceof Array) {
-      for(const st of tree) {
-        if ('function' === typeof st) {
-          st.eval(context)
-        }
-        else {
-          console.error(st)
-        }
-      }
-      return context
-    }
-    else {
-      return tree.eval(context)
-    }
+    return tree.eval(context)
   }
 }
 

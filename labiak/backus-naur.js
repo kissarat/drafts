@@ -1,6 +1,6 @@
-if ('undefined' !== typeof module) {
-  var {LexicalVocabulary, SyntaticVocabulary} = require('./vocabulary')
-}
+// if ('undefined' !== typeof module) {
+//   var {LexicalVocabulary, SyntaticVocabulary} = require('./vocabulary')
+// }
 
 
 class BackusNaurLexicalVocabulary extends LexicalVocabulary {
@@ -100,10 +100,10 @@ class BackusNaur extends Language {
   }
 }
 
-if ('undefined' !== typeof module) {
-  module.exports = {
-    BackusNaurLexicalVocabulary,
-    BackusNaurSyntaticVocabulary,
-    BackusNaur
-  }
-}
+// if ('undefined' !== typeof module) {
+//   module.exports = {
+//     BackusNaurLexicalVocabulary,
+//     BackusNaurSyntaticVocabulary,
+//     BackusNaur
+//   }
+// }
