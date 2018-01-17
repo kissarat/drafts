@@ -178,7 +178,15 @@
         dimension(array) {
             const result = new (this.constructor)()
             for (let i = 0; i < this.length; i++) {
-                result.push(...array.map(a => a + i))
+                result.push(...array.map(a => a[i % array.length]))
+            }
+            return result
+        }
+
+        repeat(n, cb = i => i) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < n; i++) {
+                result.push(...this.map((...array) => cb(i, ...array)))
             }
             return result
         }
