@@ -292,35 +292,39 @@
     }
   }
 
+  class Group extends Array {
+
+  }
+
   function group(array) {
     const stack = []
-    let current = []
+    let queue = []
     for (const a of array) {
       const one = isOp(a)
       if (one > 0) {
-        const two = isOp(current[0])
-        if (one > two) {
-          current = [a, current]
-        }
-        else if (two > 0) {
-          stack.push(current)
-          current = [a]
-        }
-        else {
-          current.unshift(a)
+        const two = isOp(queue[0])
+        if (queue[0] !== a) {
+          if (two > 0) {
+            stack.push(queue)
+            queue = [a]
+          }
+          else {
+            queue.unshift(a)
+          }
         }
       }
       else if ('(' === a) {
-        stack.push(current)
-        current = []
+        stack.push(queue)
+        queue = new Group()
       }
       else if (')' === a) {
         if (stack.length > 0) {
           const last = stack.pop()
-          last.push(current)
-          current = last
+          last.push(queue)
+          queue = last
         }
         else {
+          console.log('break')
           break
         }
       }
@@ -328,10 +332,14 @@
 
       }
       else {
-        current.push(a)
+        queue.push(a)
       }
     }
-    return current
+    let q
+    if (q = stack.pop()) {
+      queue.push(q)
+    }
+    return queue
   }
 </script>
 </body>
