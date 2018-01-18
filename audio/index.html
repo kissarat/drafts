@@ -277,11 +277,40 @@
     yield result
   }
 
+  function isOp(lex) {
+    switch (lex) {
+      case '+':
+        return 1
+      case '-':
+        return 1
+      case '*':
+        return 2
+      case '/':
+        return 2
+      default:
+        return 0
+    }
+  }
+
   function group(array) {
     const stack = []
     let current = []
     for (const a of array) {
-      if ('(' === a) {
+      const one = isOp(a)
+      if (one > 0) {
+        const two = isOp(current[0])
+        if (one > two) {
+          current = [a, current]
+        }
+        else if (two > 0) {
+          stack.push(current)
+          current = [a]
+        }
+        else {
+          current.unshift(a)
+        }
+      }
+      else if ('(' === a) {
         stack.push(current)
         current = []
       }
