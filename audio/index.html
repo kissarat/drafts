@@ -278,23 +278,31 @@
   }
 
   function group(array) {
-    const result = []
-    for(let i = 0; i < array.length; i++) {
-      const a = array[i]
+    const stack = []
+    let current = []
+    for (const a of array) {
       if ('(' === a) {
-        result.push(group(array.slice(i + 1)))
+        stack.push(current)
+        current = []
       }
       else if (')' === a) {
-        return result
+        if (stack.length > 0) {
+          const last = stack.pop()
+          last.push(current)
+          current = last
+        }
+        else {
+          break
+        }
       }
       else if (' ' === a) {
 
       }
       else {
-        result.push(a)
+        current.push(a)
       }
     }
-    return result
+    return current
   }
 </script>
 </body>
