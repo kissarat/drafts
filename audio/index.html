@@ -258,6 +258,28 @@
             list = list.reverse().tone(1)
         }
     }
+
+    function* range(n) {
+        for (let i = 0; i < n; i++) {
+            yield i
+        }
+    }
+
+    function compose(m, a) {
+        return a.reduce(function (a, e) {
+            let last = a[a.length - 1]
+            if (!last) {
+                a.push([e])
+            }
+            else if (last.length >= m) {
+                a.push([e])
+            }
+            else {
+                last.push(e)
+            }
+            return a
+        }, [])
+    }
 </script>
 </body>
 </html>
