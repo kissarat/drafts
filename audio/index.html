@@ -19,14 +19,8 @@
 
     const OCTAVE = [0, 2, 4, 5, 7, 9, 11]
 
-    function getWave(size = 6) {
-        const real = new Float32Array(size)
-        const imag = new Float32Array(size)
-        for (let i = 0; i < size; i++) {
-            real[i] = i % 3 ? 0 : Math.PI / 4
-            imag[i] = i % 3 ? 0 : Math.PI / 4
-        }
-        return c.createPeriodicWave(real, imag)
+    function getWave(a, b) {
+        return c.createPeriodicWave(new Float32Array(a), new Float32Array(b))
     }
 
     function* octave(n = 0) {
@@ -105,8 +99,8 @@
         }
 
         play(delay = 0) {
-            if (this.delay > 0) {
-                delay += this.delay
+            if (!(delay) > 0) {
+                delay = this.delay || 0
             }
             const duration = this.duration || DURATION
             for (const f of this) {
@@ -114,9 +108,12 @@
                     delay += f.play(delay)
                 }
                 else {
-                    note(f, delay, duration)
+                    playOscillator.call(this, f, delay, duration)
                     delay += duration
                 }
+            }
+            if (this.oscillator) {
+                this.oscillator.frequency.setValueAtTime(0, c.currentTime + delay)
             }
             return delay
         }
@@ -184,9 +181,9 @@
         }
 
         repeat(n, cb = i => i) {
-            const result = new (this.constructor)()
+            const result = new (this.constructor)(...this)
             for (let i = 0; i < n; i++) {
-                result.push(...this.map((...array) => cb(i, ...array)))
+                result.push(...this.map(cb))
             }
             return result
         }
@@ -213,17 +210,28 @@
     }
 
     class Parallel extends List {
+        static create(...arrays) {
+            const list = new Parallel()
+            for (const a of arrays) {
+                if (!(a instanceof List)) {
+                    list.push(new List(...a))
+                }
+            }
+            return list
+        }
+
         play(delay = 0) {
             let delta = 0
             let result = delta
             for (const f of this) {
                 if (f instanceof List) {
-                    delta = f.play(delay)
+                    f.play(delay)
                 }
-                else {
-                    note(f, delay)
-                    delta = DURATION
-                }
+                // else {
+                //     const c = {}
+                //     playOscillator.call(c, f, delay)
+                //     delta = DURATION
+                // }
                 result = Math.max(delta, result)
             }
             return result
@@ -236,12 +244,37 @@
 
     const wave = getWave()
 
+    function playOscillator(frequency, delay = 0, duration) {
+        const player = this
+        if (!player.oscillator) {
+            player.oscillator = c.createOscillator()
+            // player.oscillator.connect(c.destination)
+            player.oscillator.start()
+        }
+        const o = player.oscillator
+        if (!player.queue) {
+            player.queue = []
+        }
+        o.frequency.setValueAtTime(frequency, c.currentTime + delay)
+        // o.stop(c.currentTime + delay + duration)
+        o.addEventListener('ended', function () {
+            // console.log('STOP', c.currentTime)
+            // o.disconnect(c)
+            // player.oscillator = null
+        })
+        return o
+    }
+
     function note(frequency, delay = 0, duration = DURATION) {
         const o = c.createOscillator()
         o.frequency.value = frequency
         const time = delay + c.currentTime
-        o.setPeriodicWave(wave)
+        // o.setPeriodicWave(wave)
         o.start(time)
+        o.type = 'sine'
+        o.addEventListener('ended', function () {
+            console.log(frequency)
+        })
         o.stop(time + duration)
         o.connect(c.destination)
     }
@@ -252,10 +285,15 @@
         }
     }
 
-    function* generate(list = List.octave(4)) {
+    function* generate(list) {
         while (true) {
-            yield* list
-            list = list.reverse().tone(1)
+            yield* list.tone(1)
+            yield* list.tone(2)
+            yield* list.tone(3)
+            yield* list.tone(4)
+            yield* list.tone(3)
+            yield* list.tone(4)
+            yield* list.tone(3)
         }
     }
 
@@ -446,6 +484,8 @@
         return g.map(t => [t])
     }
 
+    const PRIMES = Array.from(primes(2000))
+
     function* comb4(g) {
         let last = 1
         for (const e of g) {
@@ -603,6 +643,151 @@
         }
         return queue
     }
+
+    var FFT = (function (size) {
+        var m = size + (size % 2); //размер выходного буфера должен быть четным
+        var out = new Array(m);
+
+        return function (data, len) {
+            var pid = (2.0 * Math.PI) / len;
+
+            var r, i, w, t;
+
+            //высчитываем среднее значение по всему интервалу
+            //для последующей нормализации
+            var mv = 0;
+            for (t = 0; t < len; t++) mv += data[t];
+            mv = mv / len;
+
+            for (w = 0; w < m; w++) {
+                var a = w * pid;
+                r = 0;
+                i = 0;
+                for (t = 0; t < len; t++) {
+                    //нормализация значения из интервала
+                    var v = data[t] - mv;
+                    var ta = a * t;
+                    r += v * Math.cos(ta);
+                    i += v * Math.sin(ta);
+                }
+
+                out[w] = Math.sqrt(r * r + i * i) / len;
+            }
+
+            return out;
+        };
+    })(64);
+
+
+    const start = Date.now() / (100)
+
+    function t() {
+        return Math.round(Date.now() / (100) - start)
+    }
+
+    function playSync(n, m) {
+        const o = playOscillator(440)
+        // setInterval(function () {
+        //     const c = t() % 5
+        //     console.log(c)
+        o.setPeriodicWave(getWave(range(n, m).reverse().map(i => 2 ** i), range(n, m).reverse().map(i => 2 ** i)))
+        // }, 300)
+    }
+
+    let bsi = 0
+    let bufferSize = 512
+    const sp = c.createScriptProcessor(bufferSize, 1, 1)
+    // const buffer = c.createBufferSource()
+    // buffer.connect()
+    sp.connect(c.destination)
+    // playOscillator(440)
+    //     .connect(sp)
+
+    const trackSize = 128
+    let ti = trackSize / 2
+    let arr = []
+
+    function paramSize(k, i) {
+        return (k + Math.PI * i * 256) / (128 * trackSize)
+    }
+
+    function sigmoid(b = Math.E, left = 0, top = 1) {
+        return function (x) {
+            return top / (1 + b ** (Math.abs(left - x)))
+        }
+    }
+
+    function sig(x) {
+        return (3.8 / (1 + (1 + 1 / 120) ** Math.abs(220 - x)))
+            + (2.9 / (1 + (1 + 1 / 180) ** Math.abs(440 - x)))
+            + (2.9 / (1 + (1 + 1 / 180) ** Math.abs(880 - x)))
+            + (1.6 / (1 + (1 + 1 / 90) ** Math.abs(1280 - x)))
+    }
+
+    function pipe(...funs) {
+        return function (v) {
+            let r = 0
+            for (const fun of funs) {
+                r += fun(v)
+            }
+            return r
+        }
+    }
+
+    const histogram = fill(100, 0)
+
+    let k = 0
+
+    function init() {
+        // if (arr.length >= 12) {
+        //     return
+        // }
+        for (; arr.length < trackSize / 2; k++) {
+            if (k > trackSize) {
+                k = 0
+                bsi = (bsi + 1) % 4
+                bufferSize = 2 ** (9 + bsi)
+            }
+            const bsb = Math.log2(bufferSize) * 60
+            const b = new Float32Array(bufferSize)
+            for (let j = 0; j < 12; j += 3) {
+                for (let i = 0; i < bsb; i++) {
+                    let v = Math.PI * 360 * j * i * k / (48 * trackSize)
+                    // histogram[Math.floor(v / 100)] += a
+                    // if (v < 80000) {
+                    v %= 12000
+                    let a = sig(v)
+                    if (a > 1) {
+                        a = 1
+                    }
+                    b[i] += a * Math.sin(v / 6)
+                    // }
+                }
+            }
+            // const B = 1
+            // for (let i = B + 1; i < b.length - B; i++) {
+            //     b[i] = (b.slice(i - B, i) + b.slice(i, i + B)) / (B * 2)
+            // }
+            arr.push(b)
+        }
+    }
+
+    init()
+
+    sp.addEventListener('audioprocess', function (e) {
+        const out = e.outputBuffer.getChannelData(0)
+        const b = arr.shift()
+        if (b) {
+            for (let i = 0; i < out.length; i++) {
+                out[i] = b[i]
+            }
+        }
+        else {
+            setTimeout(function () {
+                init()
+            }, 600)
+        }
+    })
 </script>
 </body>
 </html>
