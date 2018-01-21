@@ -695,13 +695,52 @@
     }
 
     let bsi = 0
-    let bufferSize = 512
+    let bufferSize = 8192
     const sp = c.createScriptProcessor(bufferSize, 1, 1)
     // const buffer = c.createBufferSource()
     // buffer.connect()
-    sp.connect(c.destination)
+    const bq = c.createBiquadFilter()
+    const compressor = c.createDynamicsCompressor();
+    compressor.threshold.value = -50;
+    compressor.knee.value = 40;
+    compressor.ratio.value = 6;
+    compressor.reduction.value = -40;
+    compressor.attack.value = 0;
+    compressor.release.value = 0.25;
+
+    bq.frequency.value = 1800
+    bq.Q.value = 18
+    bq.type = 'peaking'
+
+    sp.connect(bq)
+    bq.connect(compressor)
+
+    // bq.type = 'lowpass'
+    compressor.connect(c.destination)
+    // compressor.connect(c.destination)
+    // bq.connect(c.destination)
+    // cv.connect(c.destination)
+    // bq.connect(c.destination)
     // playOscillator(440)
     //     .connect(sp)
+
+    function makeDistortionCurve(amount) {
+        var k = typeof amount === 'number' ? amount : 50,
+            n_samples = 44100,
+            curve = new Float32Array(n_samples),
+            deg = Math.PI / 180,
+            i = 0,
+            x;
+        for (; i < n_samples; ++i) {
+            x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            // curve[i] = i
+        }
+        return curve;
+    }
+
+    // cv.curve = makeDistortionCurve(6000)
+    // cv.oversample = '4x'
 
     const trackSize = 128
     let ti = trackSize / 2
@@ -718,10 +757,10 @@
     }
 
     function sig(x) {
-        return (3.8 / (1 + (1 + 1 / 120) ** Math.abs(220 - x)))
-            + (2.9 / (1 + (1 + 1 / 180) ** Math.abs(440 - x)))
-            + (2.9 / (1 + (1 + 1 / 180) ** Math.abs(880 - x)))
-            + (1.6 / (1 + (1 + 1 / 90) ** Math.abs(1280 - x)))
+        return (3.8 / (1 + (1 + 1 / 90) ** Math.abs(180 - x)))
+            + (3.9 / (1 + (1 + 1 / 90) ** Math.abs(440 - x)))
+            // + (3.9 / (1 + (1 + 1 / 90) ** Math.abs(960 - x)))
+            + (3.6 / (1 + (1 + 1 / 90) ** Math.abs(1280 - x)))
     }
 
     function pipe(...funs) {
@@ -735,32 +774,81 @@
     }
 
     const histogram = fill(100, 0)
+    const trash = []
 
     let k = 0
+    let lastT = Date.now()
 
     function init() {
+        const now = Date.now()
         // if (arr.length >= 12) {
         //     return
         // }
-        for (; arr.length < trackSize / 2; k++) {
-            if (k > trackSize) {
+        for (; arr.length < trackSize; k++) {
+            if (k >= trackSize) {
                 k = 0
-                bsi = (bsi + 1) % 4
+            }
+            if (now - lastT > 6000) {
+                lastT = now
+                bsi = (bsi + 1) % 6
                 bufferSize = 2 ** (9 + bsi)
+                bq.frequency.value = 2000 + (bsi * 600)
+                console.log(bsi, bufferSize)
             }
             const bsb = Math.log2(bufferSize) * 60
-            const b = new Float32Array(bufferSize)
-            for (let j = 0; j < 12; j += 3) {
+            let b = trash.shift()
+            if (b) {
+                for (let i = 0; i < b.length; i++) {
+                    b[i] = - 0.5 * Math.sin((1 + lastT % 2) * Math.PI / 16)
+                        + Math.cos(i * Math.PI / (24 * (k * i * bsi % 12 + 1)))
+                }
+                for (let i = 512; i < b.length; i++) {
+                    b[i - 512] += 0.8 * b[i]
+                }
+            }
+            else {
+                b = new Float32Array(bufferSize)
+                for (let i = 0; i < b.length; i++) {
+                    b[i] = - 0.01 * Math.cos(i * Math.PI / (12 * (i % 48 + 1)))
+                }
+            }
+            const lastB = arr[arr.length - 1]
+            // const h = Math.abs(Math.cos(Math.PI * k / 96))
+            if (lastB && b.length === lastB.length && b.length >= sp.bufferSize / 2) {
+                for (let i = 0; i < lastB.length; i++) {
+                    b[i + b.length - 256] -= 0.6 * lastB[i]
+                }
+                const lastC = arr[arr.length - 2]
+                if (lastC && lastC.length === b.length && b.length >= sp.bufferSize / 4) {
+                    for (let i = 0; i < lastC.length; i++) {
+                        b[i + b.length * 2 - 256] += 0.2 * lastC[i]
+                    }
+                }
+            }
+            // console.log(h)
+            for (let j = 0; j < bsi + 4; j += 3) {
                 for (let i = 0; i < bsb; i++) {
                     let v = Math.PI * 360 * j * i * k / (48 * trackSize)
                     // histogram[Math.floor(v / 100)] += a
                     // if (v < 80000) {
-                    v %= 12000
-                    let a = sig(v)
+                    let a = 1
+                    if (bufferSize <= 2048) {
+                        if (v > 16000) {
+                            continue
+                        }
+                    }
+                    else {
+                        v %= 12000
+                    }
+                    a = sig(v)
                     if (a > 1) {
                         a = 1
                     }
-                    b[i] += a * Math.sin(v / 6)
+                    b[i] += a * Math.sin(v / ((bsi + 1) * 8))
+                    // if (i > bsb / 2) {
+                    //     b[i] += 0.6 * Math.sin(Math.PI / 8 + v / 2)
+                    // + 0.3 * Math.sin(-Math.PI / 4 + v / 3)
+                    // + 0.1 * Math.sin(Math.PI / 2 + v / 5)
                     // }
                 }
             }
@@ -778,14 +866,22 @@
         const out = e.outputBuffer.getChannelData(0)
         const b = arr.shift()
         if (b) {
-            for (let i = 0; i < out.length; i++) {
-                out[i] = b[i]
+            const m = Math.floor(out.length / b.length)
+            for (let j = 0; j < m; j++) {
+                for (let i = 0; i < b.length; i++) {
+                    out[i + j * b.length] = 1 / ((j + 1) ** 2) * b[i]
+                }
+            }
+            if (arr.length % 2 === 0 && arr.length > 0) {
+                trash.push(b)
             }
         }
-        else {
+        // else {
+        if (!b || arr.length < 2) {
+            // arr.push(...arr.slice(-2))
             setTimeout(function () {
                 init()
-            }, 600)
+            }, 100)
         }
     })
 </script>
