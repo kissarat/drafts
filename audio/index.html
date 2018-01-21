@@ -695,7 +695,7 @@
     }
 
     let bsi = 0
-    let bufferSize = 8192
+    let bufferSize = 1024
     const sp = c.createScriptProcessor(bufferSize, 1, 1)
     // const buffer = c.createBufferSource()
     // buffer.connect()
@@ -883,6 +883,25 @@
                 init()
             }, 100)
         }
+    })
+
+    const desc = c.createMediaStreamDestination()
+    const recorder = new MediaRecorder(desc.stream)
+    compressor.connect(desc)
+    recorder.start()
+    const chunks = []
+
+    recorder.addEventListener('dataavailable', function(evt) {
+        // push each chunk (blobs) in an array
+        chunks.push(evt.data);
+    });
+
+    recorder.addEventListener('stop', function () {
+        const blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+        const a = document.createElement('a')
+        a.innerHTML = 'Audio'
+        a.href = URL.createObjectURL(blob)
+        document.body.appendChild(a)
     })
 </script>
 </body>
