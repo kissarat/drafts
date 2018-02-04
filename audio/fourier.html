@@ -57,62 +57,72 @@
         }
     }
 
-    class ComplexArray extends Array {
-        constructor(...array) {
-            if (!(array[0] instanceof Complex)) {
-                array = array.map(re => new Complex(re))
+    class ComplexArray {
+        constructor(re, im) {
+            if (re > 0) {
+                re = new Float32Array(re)
             }
-            super(...array)
+            if (!im) {
+                im = new Float32Array(re.length)
+            }
+            this.re = re
+            this.im = im
         }
 
-        toString() {
-            return this.map(t => t.toString()).join(' ')
-        }
     }
 
-    function icfft(amplitudes) {
-        const N = amplitudes.length
+    function fourier(amplitudes) {
+        const N = amplitudes.re.length
         const iN = 1 / N
 
         for (let i = 0; i < N; ++i) {
-            if (amplitudes[i] instanceof Complex) {
-                amplitudes[i].im = -amplitudes[i].im
-            }
+            amplitudes.im[i] = -amplitudes.im[i]
         }
 
-        amplitudes = cfft(amplitudes)
+        amplitudes = ifourier(amplitudes)
 
         for (let i = 0; i < N; ++i) {
-            amplitudes[i].im = -amplitudes[i].im;
-            amplitudes[i].re *= iN;
-            amplitudes[i].im *= iN;
+            amplitudes.im[i] = -amplitudes.im[i];
+            amplitudes.re[i] *= iN;
+            amplitudes.im[i] *= iN;
         }
         return amplitudes;
     }
 
-    function cfft(amplitudes) {
-        const N = amplitudes.length
+    function ifourier(amplitudes) {
+        const N = amplitudes.re.length
         if (N <= 1) {
             return amplitudes
         }
 
         const hN = N / 2
-        let even = new Array(hN)
-        let odd = new Array(hN)
+        let even = new ComplexArray(hN)
+        let odd = new ComplexArray(hN)
         for (let i = 0; i < hN; ++i) {
-            even[i] = amplitudes[i * 2]
-            odd[i] = amplitudes[i * 2 + 1]
+            even.re[i] = amplitudes.re[i * 2]
+            even.im[i] = amplitudes.im[i * 2]
+            odd.re[i] = amplitudes.re[i * 2 + 1]
+            odd.im[i] = amplitudes.im[i * 2 + 1]
         }
-        even = cfft(even)
-        odd = cfft(odd)
+        even = fourier(even)
+        odd = fourier(odd)
 
         const a = -2 * Math.PI
         for (let k = 0; k < hN; ++k) {
-            if (!(even[k] instanceof Complex))
-                even[k] = new Complex(even[k], 0)
-            if (!(odd[k] instanceof Complex))
-                odd[k] = new Complex(odd[k], 0)
             let p = k / N;
+            const oddReal = odd.re[k]
+            const oddImag = odd.im[k]
+            let imag = a * p
+            let real = Math.cos(imag)
+            imag = Math.sin(imag)
+            const r = real * oddReal - imag * oddImag
+            imag = real * oddReal + imag * oddReal
+            real = r
+            const khN = k + hN
+            amplitudes.re[k] = real + oddReal
+            amplitudes.im[k] = imag + oddImag
+            amplitudes.re[khN] = real - even.re[k]
+            amplitudes.im[khN] = imag - even.im[k]
             let t = new Complex(0, a * p)
             t.cexp(t).mul(odd[k], t)
             amplitudes[k] = even[k].add(t, odd[k])
