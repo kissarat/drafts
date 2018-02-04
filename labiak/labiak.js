@@ -12,7 +12,7 @@ class LabiakLexicalVocabulary extends LexicalVocabulary {
     this.setString('Add', '+')
     this.setString('Sub', '-')
     this.setString('Mult', '*')
-    this.setString('Div', '*')
+    this.setString('Div', '/')
     this.setString('LeftRound', '(')
     this.setString('RightRound', ')')
     this.setString('LeftCurly', '{')
