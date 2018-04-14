@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="https://cdn.rawgit.com/alemangui/pizzicato/master/distr/Pizzicato.min.js"></script>
+</head>
+<body>
+<audio></audio>
+<script>
+    // const a = document.querySelector('audio')
+    const c = new AudioContext()
+    const DURATION = 1 / 8
+    const s = c.createBufferSource()
+    s.connect(c.destination)
+    s.start(0)
+
+    const A1 = 440 * 2 ** (-57 / 12)
+
+    const OCTAVE = [0, 2, 4, 5, 7, 9, 11]
+
+    function getWave(a, b) {
+        return c.createPeriodicWave(new Float32Array(a), new Float32Array(b))
+    }
+
+    function* octave(n = 0) {
+        for (const m of OCTAVE) {
+            yield 2 ** n * A1 * 2 ** (m / 12)
+        }
+    }
+
+    function at(i) {
+        return 12 * Math.floor(i / OCTAVE.length) + OCTAVE[i % OCTAVE.length]
+    }
+
+    function* half(n = 96) {
+        for (let i = 0; i < n; i++) {
+            yield A1 * 2 ** (i / 12)
+        }
+    }
+
+    function* all() {
+        for (let i = 0; i < 8; i++) {
+            yield octave(i)
+        }
+    }
+
+    function tone(n = 1) {
+        return 2 ** (n / 6)
+    }
+
+    class List extends Array {
+        constructor(a) {
+            if (1 === arguments.length && 'number' !== typeof a) {
+                super(...Array.from(a))
+            }
+            else {
+                super(...arguments)
+            }
+        }
+
+        static octave(n) {
+            return new List(octave(n))
+        }
+
+        octave(n = 0) {
+            return this.recursive(f => A1 * 2 ** ((f + n * 12) / 12))
+        }
+
+        generate(max, gen = generate) {
+            let i = 0
+            const result = new (this.constructor)()
+            for (const n of gen(this)) {
+                if (i < max) {
+                    result.push(n)
+                }
+                else {
+                    break
+                }
+                i++
+            }
+            return result
+        }
+
+        recursive(cb) {
+            return this.map((a, i) => a instanceof Array ? a.recursive(cb) : cb(a, i))
+        }
+
+        scale(n) {
+            return this.recursive(f => f * n)
+        }
+
+        tone(n) {
+            return this.scale(tone(n))
+        }
+
+        set(options) {
+            return Object.assign(this, options)
+        }
+
+        play(delay = 0) {
+            if (!(delay) > 0) {
+                delay = this.delay || 0
+            }
+            const duration = this.duration || DURATION
+            for (const f of this) {
+                if (f instanceof List) {
+                    delay += f.play(delay)
+                }
+                else {
+                    playOscillator.call(this, f, delay, duration)
+                    delay += duration
+                }
+            }
+            if (this.oscillator) {
+                this.oscillator.frequency.setValueAtTime(0, c.currentTime + delay)
+            }
+            return delay
+        }
+
+        parallel() {
+            return new Parallel(...this)
+        }
+
+        replace(start, deleteCount, ...array) {
+            this.splice(...arguments)
+            return this
+        }
+
+        compress(shift) {
+            return this.filter((t, i) => 0 === i % shift)
+        }
+
+        mix(list, shift = 2, n = 1) {
+            const result = new (this.constructor)()
+            for (let i = n; i < this.length + n; i++) {
+                if (i % shift === 0) {
+                    result.push(list[i % list.length])
+                }
+                else {
+                    result.push(this[i - n])
+                }
+            }
+            return result
+        }
+
+        duplicate(cb = i => i) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < this.length; i++) {
+                result.push(this[i], cb(this[i]))
+
+            }
+            return result
+        }
+
+        compose(n) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < this.length; i += n) {
+                result.push(new (this.constructor)(...this.slice(i, i + n)))
+            }
+            return result
+        }
+
+        append(n = 2, cb = i => i) {
+            const result = new (this.constructor)()
+            for (let i = 1; i <= this.length; i++) {
+                if (i % n === 0) {
+                    result.push(cb(this[i - 1]))
+                }
+                result.push(this[i - 1])
+            }
+            return result
+        }
+
+        dimension(array) {
+            const result = new (this.constructor)()
+            for (let i = 0; i < this.length; i++) {
+                result.push(...array.map(a => a[i % array.length]))
+            }
+            return result
+        }
+
+        repeat(n, cb = i => i) {
+            const result = new (this.constructor)(...this)
+            for (let i = 0; i < n; i++) {
+                result.push(...this.map(cb))
+            }
+            return result
+        }
+    }
+
+    class Range extends List {
+        static create(n) {
+            const list = new Range()
+            for (let i = 0; i < n; i++) {
+                list.push(at(i))
+            }
+            return list
+        }
+
+        static simple(n, m = 0) {
+            const list = new Range(n)
+            list.fill(m)
+            return list
+        }
+
+        tone(n) {
+            return this.recursive(f => f + n)
+        }
+    }
+
+    class Parallel extends List {
+        static create(...arrays) {
+            const list = new Parallel()
+            for (const a of arrays) {
+                if (!(a instanceof List)) {
+                    list.push(new List(...a))
+                }
+            }
+            return list
+        }
+
+        play(delay = 0) {
+            let delta = 0
+            let result = delta
+            for (const f of this) {
+                if (f instanceof List) {
+                    f.play(delay)
+                }
+                // else {
+                //     const c = {}
+                //     playOscillator.call(c, f, delay)
+                //     delta = DURATION
+                // }
+                result = Math.max(delta, result)
+            }
+            return result
+        }
+    }
+
+    const NOTES = Array.from(all()).map(o => Array.from(o))
+    const TONES = NOTES.reduce((a, arr) => a.concat(arr), [])
+    const HALF = Array.from(half())
+
+    const wave = getWave()
+
+    function playOscillator(frequency, delay = 0, duration) {
+        const player = this
+        if (!player.oscillator) {
+            player.oscillator = c.createOscillator()
+            // player.oscillator.connect(c.destination)
+            player.oscillator.start()
+        }
+        const o = player.oscillator
+        if (!player.queue) {
+            player.queue = []
+        }
+        o.frequency.setValueAtTime(frequency, c.currentTime + delay)
+        // o.stop(c.currentTime + delay + duration)
+        o.addEventListener('ended', function () {
+            // console.log('STOP', c.currentTime)
+            // o.disconnect(c)
+            // player.oscillator = null
+        })
+        return o
+    }
+
+    function note(frequency, delay = 0, duration = DURATION) {
+        const o = c.createOscillator()
+        o.frequency.value = frequency
+        const time = delay + c.currentTime
+        // o.setPeriodicWave(wave)
+        o.start(time)
+        o.type = 'sine'
+        o.addEventListener('ended', function () {
+            console.log(frequency)
+        })
+        o.stop(time + duration)
+        o.connect(c.destination)
+    }
+
+    function* natural(m, n = 1) {
+        for (let i = 0; i < m; i++) {
+            yield i * n
+        }
+    }
+
+    function* generate(list) {
+        while (true) {
+            yield* list.tone(1)
+            yield* list.tone(2)
+            yield* list.tone(3)
+            yield* list.tone(4)
+            yield* list.tone(3)
+            yield* list.tone(4)
+            yield* list.tone(3)
+        }
+    }
+
+    function range(n, m = 0) {
+        const a = []
+        for (let i = 0; i < n; i++) {
+            a.push(i + m)
+        }
+        return a
+    }
+
+    function fill(n, m = 1) {
+        const a = []
+        for (let i = 0; i < n; i++) {
+            a.push(m)
+        }
+        return a
+    }
+
+    function cut(a, n = Number.MAX_SAFE_INTEGER) {
+        const r = []
+        for (const i of a) {
+            r.push(i)
+            if (r.length >= n) {
+                break
+            }
+        }
+        return r
+    }
+
+    function normalize(a) {
+        const max = Math.max(...a)
+        return a.map(e => e / max)
+    }
+
+    function possibility(a) {
+        const sum = a.reduce(add, 0)
+        return a.map(e => e / sum)
+    }
+
+    function* primes(n = Number.MAX_SAFE_INTEGER) {
+        for (const s of primes.stored) {
+            if (s <= n) {
+                yield s
+            }
+            else {
+                break
+            }
+        }
+        loop: for (let i = 2; i <= n; i++) {
+            for (const s of primes.stored) {
+                if (i % s === 0) {
+                    continue loop
+                }
+            }
+            primes.stored.push(i)
+            yield i
+        }
+    }
+
+    primes.stored = []
+
+    // const PRIMES = cut(primes(), 10)
+
+    function one(i, v) {
+        const a = fill(1000, 0)
+        a[i] = v
+        return a
+    }
+
+    function detector(a) {
+        const r = []
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] >= r.length) {
+                r.push(i)
+            }
+        }
+        return r
+    }
+
+    function powerOf(n, b) {
+        let r = n
+        let i = 0;
+        for (; r >= b; i++) {
+            if (r % b === 0) {
+                r /= b
+            }
+            else {
+                return 0
+            }
+        }
+        return i
+    }
+
+    function simplify(n) {
+        const a = []
+        for (const p of primes()) {
+            while (n % p === 0) {
+                a.push(p)
+                n /= p
+            }
+            if (1 === n) {
+                break
+            }
+        }
+        return a
+    }
+
+    function racional(a, b, ...tail) {
+        if (!b) {
+            return a
+        }
+        if (b.length === 0) {
+            return b
+        }
+        const r = []
+        let j = 0
+        for (let i = 0; i < a.length; i++) {
+            const k = b.indexOf(a[i], j)
+            if (k >= 0) {
+                j = k
+                if (a[i] === b[j]) {
+                    r.push(a[i])
+                    j++
+                }
+            }
+        }
+        if (tail.length > 0) {
+            return racional(r, ...tail)
+        }
+        return r
+    }
+
+    function random(n) {
+        const a = []
+        for (let i = 0; i < n; i++) {
+            a.push(Math.random())
+        }
+        return a
+    }
+
+    function freq(...args) {
+        let f = racional(...args.map(simplify).reduce(mult, 1))
+        return args.map(a => a / f)
+    }
+
+    function combine(a, ...b) {
+        if (b.length > 0) {
+            const c = []
+            const dd = combine(...b)
+            for (const d of dd) {
+                c.push([a, ...d])
+            }
+            for (const d of dd) {
+                for (let i = 1; i < d.length; i++) {
+                    c.push([...d.slice(0, i), a, ...d.slice(i)])
+                }
+                c.push([...d, a])
+            }
+            return c
+        }
+        return [[a]]
+    }
+
+    function comb2(n, g) {
+        if (n > 1) {
+            const r = []
+            for (const e of g) {
+                for (const d of comb2(n - 1, g)) {
+                    r.push([e, ...d])
+                }
+            }
+            return r
+        }
+        return g.map(t => [t])
+    }
+
+    function comb3(g, ...args) {
+        if (args.length > 0) {
+            const r = []
+            for (const one of g) {
+                for (const d of comb3(...args)) {
+                    r.push([one, ...d])
+                }
+            }
+            return r
+        }
+        return g.map(t => [t])
+    }
+
+    const PRIMES = Array.from(primes(2000))
+
+    function* comb4(g) {
+        let last = 1
+        for (const e of g) {
+            while (e - last > 1) {
+                last += 1
+                yield simplify(last)
+            }
+            last = e
+            yield [e]
+        }
+    }
+
+    function freq2(a) {
+        const r = {}
+        for (const e of a) {
+            if (r[e]) {
+                r[e]++
+            }
+            else {
+                r[e] = 1
+            }
+        }
+        return r
+    }
+
+    function bit(a) {
+        return a.reduce((b, i) => b | (1 << i), 0)
+    }
+
+
+    function base2(n) {
+        let a = []
+        const max = Math.ceil(Math.log2(n))
+        for (let i = 0; i < n; i++) {
+            let b = []
+            for (let j = 0; j < max; j++) {
+                if (i & (1 << j)) {
+                    b.push(j)
+                }
+            }
+            a.push(b)
+        }
+        return a
+    }
+
+    function without(a) {
+        return function (n) {
+            return n > 1 && a.indexOf(n) < 0
+        }
+    }
+
+    function prime(n) {
+        return primes()[n]
+    }
+
+    function mult(a, n) {
+        return a * n
+    }
+
+    function q(n = Math.E) {
+        return function (a) {
+            return a * Math.log(a) / Math.log(n)
+        }
+    }
+
+    function entropy(array) {
+        let e = 0
+        for (const a of array) {
+            e += a * Math.log2(a)
+        }
+        return -e
+    }
+
+    function add(a, n) {
+        return a + n
+    }
+
+    function cell(a, b, fun = add) {
+        return a.map((e, i) => add(e, b[i]))
+    }
+
+    function* compose(m, array) {
+        let result = []
+        for (const a of array) {
+            result.push(a)
+            if (result.length >= m) {
+                yield result
+                result = []
+            }
+        }
+        yield result
+    }
+
+    function isOp(lex) {
+        switch (lex) {
+            case '+':
+                return 1
+            case '-':
+                return 1
+            case '*':
+                return 2
+            case '/':
+                return 2
+            default:
+                return 0
+        }
+    }
+
+    class Group extends Array {
+
+    }
+
+    function group(array) {
+        const stack = []
+        let queue = []
+        for (const a of array) {
+            const one = isOp(a)
+            if (one > 0) {
+                const two = isOp(queue[0])
+                if (queue[0] !== a) {
+                    if (two > 0) {
+                        stack.push(queue)
+                        queue = [a]
+                    }
+                    else {
+                        queue.unshift(a)
+                    }
+                }
+            }
+            else if ('(' === a) {
+                stack.push(queue)
+                queue = new Group()
+            }
+            else if (')' === a) {
+                if (stack.length > 0) {
+                    const last = stack.pop()
+                    last.push(queue)
+                    queue = last
+                }
+                else {
+                    console.log('break')
+                    break
+                }
+            }
+            else if (' ' === a) {
+
+            }
+            else {
+                queue.push(a)
+            }
+        }
+        let q
+        if (q = stack.pop()) {
+            queue.push(q)
+        }
+        return queue
+    }
+
+    var FFT = (function (size) {
+        var m = size + (size % 2); //размер выходного буфера должен быть четным
+        var out = new Array(m);
+
+        return function (data, len) {
+            var pid = (2.0 * Math.PI) / len;
+
+            var r, i, w, t;
+
+            //высчитываем среднее значение по всему интервалу
+            //для последующей нормализации
+            var mv = 0;
+            for (t = 0; t < len; t++) mv += data[t];
+            mv = mv / len;
+
+            for (w = 0; w < m; w++) {
+                var a = w * pid;
+                r = 0;
+                i = 0;
+                for (t = 0; t < len; t++) {
+                    //нормализация значения из интервала
+                    var v = data[t] - mv;
+                    var ta = a * t;
+                    r += v * Math.cos(ta);
+                    i += v * Math.sin(ta);
+                }
+
+                out[w] = Math.sqrt(r * r + i * i) / len;
+            }
+
+            return out;
+        };
+    })(64);
+
+
+    const start = Date.now() / (100)
+
+    function t() {
+        return Math.round(Date.now() / (100) - start)
+    }
+
+    function playSync(n, m) {
+        const o = playOscillator(440)
+        // setInterval(function () {
+        //     const c = t() % 5
+        //     console.log(c)
+        o.setPeriodicWave(getWave(range(n, m).reverse().map(i => 2 ** i), range(n, m).reverse().map(i => 2 ** i)))
+        // }, 300)
+    }
+
+    let bsi = 0
+    let bufferSize = 1024
+    const sp = c.createScriptProcessor(bufferSize, 1, 1)
+    // const buffer = c.createBufferSource()
+    // buffer.connect()
+    const bq = c.createBiquadFilter()
+    const compressor = c.createDynamicsCompressor();
+    compressor.threshold.value = -50;
+    compressor.knee.value = 40;
+    compressor.ratio.value = 6;
+    compressor.reduction.value = -40;
+    compressor.attack.value = 0;
+    compressor.release.value = 0.25;
+
+    bq.frequency.value = 1800
+    bq.Q.value = 18
+    bq.type = 'peaking'
+
+    sp.connect(bq)
+    bq.connect(compressor)
+
+    // bq.type = 'lowpass'
+    compressor.connect(c.destination)
+    // compressor.connect(c.destination)
+    // bq.connect(c.destination)
+    // cv.connect(c.destination)
+    // bq.connect(c.destination)
+    // playOscillator(440)
+    //     .connect(sp)
+
+    function makeDistortionCurve(amount) {
+        var k = typeof amount === 'number' ? amount : 50,
+            n_samples = 44100,
+            curve = new Float32Array(n_samples),
+            deg = Math.PI / 180,
+            i = 0,
+            x;
+        for (; i < n_samples; ++i) {
+            x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            // curve[i] = i
+        }
+        return curve;
+    }
+
+    // cv.curve = makeDistortionCurve(6000)
+    // cv.oversample = '4x'
+
+    const trackSize = 128
+    let ti = trackSize / 2
+    let arr = []
+
+    function paramSize(k, i) {
+        return (k + Math.PI * i * 256) / (128 * trackSize)
+    }
+
+    function sigmoid(b = Math.E, left = 0, top = 1) {
+        return function (x) {
+            return top / (1 + b ** (Math.abs(left - x)))
+        }
+    }
+
+    function sig(x) {
+        return (3.8 / (1 + (1 + 1 / 90) ** Math.abs(180 - x)))
+            + (3.9 / (1 + (1 + 1 / 90) ** Math.abs(440 - x)))
+            // + (3.9 / (1 + (1 + 1 / 90) ** Math.abs(960 - x)))
+            + (3.6 / (1 + (1 + 1 / 90) ** Math.abs(1280 - x)))
+    }
+
+    function pipe(...funs) {
+        return function (v) {
+            let r = 0
+            for (const fun of funs) {
+                r += fun(v)
+            }
+            return r
+        }
+    }
+
+    const histogram = fill(100, 0)
+    const trash = []
+
+    let k = 0
+    let lastT = Date.now()
+
+    function init() {
+        const now = Date.now()
+        // if (arr.length >= 12) {
+        //     return
+        // }
+        for (; arr.length < trackSize; k++) {
+            if (k >= trackSize) {
+                k = 0
+            }
+            if (now - lastT > 6000) {
+                lastT = now
+                bsi = (bsi + 1) % 6
+                bufferSize = 2 ** (9 + bsi)
+                bq.frequency.value = 2000 + (bsi * 600)
+                console.log(bsi, bufferSize)
+            }
+            const bsb = Math.log2(bufferSize) * 60
+            let b = trash.shift()
+            if (b) {
+                for (let i = 0; i < b.length; i++) {
+                    b[i] = - 0.5 * Math.sin((1 + lastT % 2) * Math.PI / 16)
+                        + Math.cos(i * Math.PI / (24 * (k * i * bsi % 12 + 1)))
+                }
+                for (let i = 512; i < b.length; i++) {
+                    b[i - 512] += 0.8 * b[i]
+                }
+            }
+            else {
+                b = new Float32Array(bufferSize)
+                for (let i = 0; i < b.length; i++) {
+                    b[i] = - 0.01 * Math.cos(i * Math.PI / (12 * (i % 48 + 1)))
+                }
+            }
+            const lastB = arr[arr.length - 1]
+            // const h = Math.abs(Math.cos(Math.PI * k / 96))
+            if (lastB && b.length === lastB.length && b.length >= sp.bufferSize / 2) {
+                for (let i = 0; i < lastB.length; i++) {
+                    b[i + b.length - 256] -= 0.6 * lastB[i]
+                }
+                const lastC = arr[arr.length - 2]
+                if (lastC && lastC.length === b.length && b.length >= sp.bufferSize / 4) {
+                    for (let i = 0; i < lastC.length; i++) {
+                        b[i + b.length * 2 - 256] += 0.2 * lastC[i]
+                    }
+                }
+            }
+            // console.log(h)
+            for (let j = 0; j < bsi + 4; j += 3) {
+                for (let i = 0; i < bsb; i++) {
+                    let v = Math.PI * 360 * j * i * k / (48 * trackSize)
+                    // histogram[Math.floor(v / 100)] += a
+                    // if (v < 80000) {
+                    let a = 1
+                    if (bufferSize <= 2048) {
+                        if (v > 16000) {
+                            continue
+                        }
+                    }
+                    else {
+                        v %= 12000
+                    }
+                    a = sig(v)
+                    if (a > 1) {
+                        a = 1
+                    }
+                    b[i] += a * Math.sin(v / ((bsi + 1) * 8))
+                    // if (i > bsb / 2) {
+                    //     b[i] += 0.6 * Math.sin(Math.PI / 8 + v / 2)
+                    // + 0.3 * Math.sin(-Math.PI / 4 + v / 3)
+                    // + 0.1 * Math.sin(Math.PI / 2 + v / 5)
+                    // }
+                }
+            }
+            // const B = 1
+            // for (let i = B + 1; i < b.length - B; i++) {
+            //     b[i] = (b.slice(i - B, i) + b.slice(i, i + B)) / (B * 2)
+            // }
+            arr.push(b)
+        }
+    }
+
+    init()
+
+    sp.addEventListener('audioprocess', function (e) {
+        const out = e.outputBuffer.getChannelData(0)
+        const b = arr.shift()
+        if (b) {
+            const m = Math.floor(out.length / b.length)
+            for (let j = 0; j < m; j++) {
+                for (let i = 0; i < b.length; i++) {
+                    out[i + j * b.length] = 1 / ((j + 1) ** 2) * b[i]
+                }
+            }
+            if (arr.length % 2 === 0 && arr.length > 0) {
+                trash.push(b)
+            }
+        }
+        // else {
+        if (!b || arr.length < 2) {
+            // arr.push(...arr.slice(-2))
+            setTimeout(function () {
+                init()
+            }, 100)
+        }
+    })
+
+    const desc = c.createMediaStreamDestination()
+    const recorder = new MediaRecorder(desc.stream)
+    compressor.connect(desc)
+    recorder.start()
+    const chunks = []
+
+    recorder.addEventListener('dataavailable', function(evt) {
+        // push each chunk (blobs) in an array
+        chunks.push(evt.data);
+    });
+
+    recorder.addEventListener('stop', function () {
+        const blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+        const a = document.createElement('a')
+        a.innerHTML = 'Audio'
+        a.href = URL.createObjectURL(blob)
+        document.body.appendChild(a)
+    })
+</script>
+</body>
+</html>

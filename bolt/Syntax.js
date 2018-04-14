@@ -1,4 +1,0 @@
-class Syntax {
-  find(it) {
-  }
-}
